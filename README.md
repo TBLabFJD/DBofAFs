@@ -60,6 +60,7 @@ This pipeline has the following steps:
 A TSV file must be provided with information of all samples. This file must have a header with the following names: `SAMPLE`, `FAMILY` and `CATEGORY`. These column names must be in capital letters. The category can be a disease, phenotype or any feature that can be used to make subcohorts. 
 ***Directory structure***
 The database directory must have the following directories created before running the pipeline:
+IMPORTANTISIMOOOO: hay que poner merged_vcf no merged_vcfs en el nombre de la carpeta (originalmente pone merged_vcfs y no es así)
 ```
 └─coverage
 │   dicarded_bed
@@ -73,7 +74,7 @@ The database directory must have the following directories created before runnin
 │   incorporated_vcf   
 │   new_vcf   
 │
-└─merged_vcfs
+└─merged_vcf
 └─metadata
 ```
 Input VCF files must be copied into `individual_vcf/new_vcf/` directory and BED files with coverage information for each sample in `coverage/new_bed/`. This coverage files can be created using mosdepth: `mosdepth --quantize 10: -n -x ${output_prefix} ${bamfile}` to create a bed file with the regions captured with a depth equal or higher than 10 reads. Samples names from the VCF are retrieved from the header of the file. BED file should follow this naming `[SAMPLEID]_*.bed or [SAMPLEID].*.bed` .
