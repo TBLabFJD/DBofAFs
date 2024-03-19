@@ -136,7 +136,9 @@ def main(args):
 
                 locus, alleles, freq = line.split("\t")
 
-                chr="chr"+locus.split(":")[0]
+                #linea gur: no poner chr porque ya vienen puesto en el genoma 38, mirar comment de callMAF.py
+                chr=locus.split(":")[0]
+                #linea gonzalo chr="chr"+locus.split(":")[0]
                 position=locus.split(":")[1]
                 alleles = ast.literal_eval(alleles)
                 freq1=freq.replace("null","None")
