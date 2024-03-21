@@ -1,8 +1,6 @@
 #!/bin/bash
 
 
-export LD_LIBRARY_PATH=/lib64:$LD_LIBRARY_PATH
-
 module load bedtools
 module load miniconda/3.6
 module load gcc
