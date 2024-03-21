@@ -62,7 +62,7 @@ def main(args):
 
 
         sampleDicc = open(sample_group_file, "r")
-
+        print("Abriendo sample_group_file.txt")
         sd = []
         sd.append("")
 
@@ -86,13 +86,14 @@ def main(args):
 
 
         # open internal frequencies VCF file_
-
+         print("abrir el VCF  MAFdb_AN20_${date_paste}.vcf.gz - sin frecuencias en info")
         parsed_output = open(vcf_out, "w")
 
 
         # read VCF header
 
         file = gzip.open(mergedVCF, "rt")
+        print("abrir el VCF  imputed_${date_paste}.vcf.gz - el original de todas las variantes pegadas con sus frecuencias indiv")
 
         for line in file:
 
@@ -102,6 +103,7 @@ def main(args):
             else:
                 if line[0:6]!="##INFO" and line[0:8]!="##FORMAT":
                     parsed_output.write(line)
+                        print("supuestapente esta pegando la info y el format del header del imputed.vcf en el MAFdb_AN20.vf")
 
         for element in sd:
 
@@ -109,6 +111,7 @@ def main(args):
 
                 newinfofield="##INFO=<ID="+tag+element+",Number=1,Type=Float>\n"
                 parsed_output.write(newinfofield)
+                    print("pegando más info del imputed VCF en el MADdb_20.vcf")
 
             for tag2 in ["AN", "AC", "HomoC"]:
 
@@ -125,7 +128,7 @@ def main(args):
         ## read file and parse 
 
         with open(mafdb_file, "r") as f:
-
+                 print("ahora abre el MAFdb.tab que es el que tiene las variantes con las frecuencias por grupos (D_MAFfjd, PS_fjd, D_berta....)")
             freqdict={}
 
             f.readline()
@@ -135,7 +138,7 @@ def main(args):
                 INFOlist = []
 
                 locus, alleles, freq = line.split("\t")
-
+                print("aqui extrae las 4 columnas del MAFdb: chrom, pos, alelos y frecuencias")
                 #linea gur: no poner chr porque ya vienen puesto en el genoma 38, mirar comment de callMAF.py
                 chr=locus.split(":")[0]
                 #linea gonzalo chr="chr"+locus.split(":")[0]
@@ -147,15 +150,17 @@ def main(args):
                 for index in range(0,len(freq)):
 
                     freqDicc = freq[index]
-
+                     print(f"En la mutacion de la linea {index} el  AN es {freqDicc}")
                     if freqDicc["AF"] != None and freqDicc["AN"]>20:
+                            print(f"Entrando en el if porque la linea {index} su AF!=None y el AN>20")
                         pathoSuffix = sd[index]            
 
                         newKeys = [x+pathoSuffix+"="+str(round(freqDicc[x],5)) if x!="homozygote_count" else "HomoC"+pathoSuffix+"="+str(round(freqDicc[x],5)) for x in freqDicc.keys()]
 
                         INFOlist = INFOlist+newKeys
-
-
+                            print("Esto es la INFOlist;")
+                            print(INFOlist)
+                print(f"ahora estaria pegando la info de la linea {index} del MAFdb.tab en el MAFdb_AN20_${date_paste}.vcf")
                 parsed_output.write("%s\t%s\t.\t%s\t%s\t.\t.\t%s\n" %(chr, position, alleles[0], alleles[1], ";".join(INFOlist)))
 
 
