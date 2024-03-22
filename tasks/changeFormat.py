@@ -86,7 +86,7 @@ def main(args):
 
 
         # open internal frequencies VCF file_
-         print("abrir el VCF  MAFdb_AN20_${date_paste}.vcf.gz - sin frecuencias en info")
+        print("abrir el VCF  MAFdb_AN20_${date_paste}.vcf.gz - sin frecuencias en info")
         parsed_output = open(vcf_out, "w")
 
 
