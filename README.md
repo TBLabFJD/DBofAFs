@@ -63,14 +63,14 @@ The database directory must have the following directories created before runnin
 IMPORTANTISIMOOOO: hay que poner merged_vcf no merged_vcfs en el nombre de la carpeta (originalmente pone merged_vcfs y no es así)
 ```
 └─coverage
-│   dicarded_bed
+│   discarded_bed
 │   incorporated_bed   
 │   new_bed   
 │
 └─db
 └─imputed_vcf
 └─individual_vcf
-│   dicarded_vcf
+│   discarded_vcf
 │   incorporated_vcf   
 │   new_vcf   
 │
