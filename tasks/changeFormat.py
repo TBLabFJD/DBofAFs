@@ -111,7 +111,7 @@ def main(args):
 
                 newinfofield="##INFO=<ID="+tag+element+",Number=1,Type=Float>\n"
                 parsed_output.write(newinfofield)
-                print("pegando más info del imputed VCF en el MADdb_20.vcf")
+                print("pegando mas info del imputed VCF en el MADdb_20.vcf")
 
             for tag2 in ["AN", "AC", "HomoC"]:
 
