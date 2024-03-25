@@ -14,8 +14,11 @@ module load bcftools
 #path antiguo gonzalo
 #export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.322.b06-1.el7_9.x86_64/jre/bin/:$PATH
 
-#path graciela
-export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.402.b06-2.el8.x86_64/jre/bin/:$PATH
+#path graciela uam
+#export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.402.b06-2.el8.x86_64/jre/bin/:$PATH
+
+#path TBLAB
+export PATH=/usr/lib/jvm/java-8-openjdk-amd64/jre/bin/:$PATH
 
 
 
