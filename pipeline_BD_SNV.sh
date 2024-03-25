@@ -1,5 +1,11 @@
 #!/bin/bash
-
+#module load bedtools
+#module load miniconda/3.6
+#module load gcc
+#module load plink
+#module load R/R
+#module load bcftools
+#source ~/.Renviron
 
 
 #no se encontraba el libcrypto.so.1.0.0 que necesitaba el bcftools, asi que con esta linea le digo que busque en /lib64
@@ -21,14 +27,16 @@ export PATH=/usr/lib/jvm/java-8-openjdk-amd64/jre/bin/:$PATH
 ## el data base path es TODA la carpeta donde esta db, vcfs, metadata...
 
 # Data base path
-path_maf="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs"
+path_maf="/mnt/tblab/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs"
+#path_maf="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs"
 
 # TSV file with sample-pathology information
-mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/pru_metadata.tsv"
+#mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/pru_metadata.tsv"
+mymetadatapathology_uniq="/mnt/tblab/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/pru_metadata.tsv"
 
 # Task directory
-task_dir="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks"
-
+#task_dir="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks"
+task_dir="/mnt/tblab/graciela/TODO_DBofAFs/DBofAFs/tasks"
 
 
 
