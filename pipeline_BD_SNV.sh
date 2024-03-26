@@ -506,6 +506,20 @@ python ${task_dir}/changeFormat.py \
 bgzip -c ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf > ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
 tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
 
+
+#######GUR: añadir lo del ID para que se creen bien las columnas de la base de datos 
+
+#1) SET ID COLUMN:
+
+bcftools annotate --set-id '%CHROM\_%POS\_%REF\_%FIRST_ALT' MAFdb_AN20_${date_paste}.vcf.gz > MAFdb_AN20_${date_paste}_ID.vcf.gz
+
+# 2) COMPRIMIR BIEN EL NUEVO id.vcf.GZ y ademas crearle su .tbi INDEX)
+mv MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
+bcftools view -Oz -o MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
+htsfile MAFdb_AN20_${date_paste}_ID.vcf.gz
+bcftools index -t MAFdb_AN20_${date_paste}_ID.vcf.gz ##by default is .csi -> hay que poner opcion -t para que me del el .tbi
+
+
 ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
@@ -541,7 +555,6 @@ mv ${path_maf}/individual_vcf/discarded_vcf_tmp/* ${path_maf}/individual_vcf/dis
 mv ${path_maf}/coverage/discarded_bed_tmp/* ${path_maf}/coverage/discarded_bed/
 rm -r ${path_maf}/individual_vcf/discarded_vcf_tmp
 rm -r ${path_maf}/coverage/discarded_bed_tmp
-
 
 
 echo "FINAL:" >> ${path_maf}/metadata/${date_dir}/logfile.txt
