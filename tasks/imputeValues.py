@@ -13,7 +13,13 @@ import glob
 from datetime import datetime
 import argparse
 
-
+##GUR: BASICAMENTE: se abre el merged_vcf, se extrae la región GT -> vcf@gt, eso es un dataframe en la que cada fila es una mutacion y 
+# cada columna es la info de una de las muestras merged
+# y te dice el GT:AD:DP:GQ:PL de cada sample ID (21 columnas porque yo meti 21 VCFs para merged) para cada mutacion
+#el imputed_vcf que es el output de esta funcion basicamente es meter 0/0... en las posiciones que se han cubierto para cada muestra pero que no estan mutadas,
+#por eso se pone 0/0 porque quiere decir que el sample_id concreto tiene las pos cubierta pero no tiene la mutacion asociada a esa POS (REF/REF = 0/0...)
+#ir a Graciela@work para ver como es el format en el merged_vcf vs el imputed_vcf
+#https://idcsalud-my.sharepoint.com/personal/graciela_uria_quironsalud_es/_layouts/15/Doc.aspx?sourcedoc={71ca5f03-8e2d-4360-83d8-070120f058bd}&action=edit&wd=target%28DATOS_CRUDOS_DB.one%7C3ed9f2bf-bc83-4986-a8bd-d24142f67734%2FMERGED_VCF%20vs%20IMPUTED_VCF%7C503fc902-9a2e-4eec-a3dd-385afceb68e8%2F%29&wdorigin=NavigationUrl
 
 def main(args):
 
