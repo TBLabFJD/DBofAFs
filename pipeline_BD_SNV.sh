@@ -68,12 +68,14 @@ echo $(date)
 echo "FIRST FAMILY FILTER" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 STARTTIME=$(date +%s)
 echo "FIRST FAMILY FILTER"
-
+#GUR: crea dos listas de los VCFs que ya estan incorporados en una bd previa (multisample.tsv) y una lista de los nuevos (indiv .sample) en este
+# caso no hay multisample.vcf porque la base de datos se crea de 0 sin que haya incorporated
 for vcf in ${path_maf}/individual_vcf/incorporated_vcf/*.vcf.gz; do bcftools query -l ${vcf} >> ${path_maf}/metadata/${date_dir}/multisample.tsv ; done
 for vcf in ${path_maf}/individual_vcf/new_vcf/*.vcf.gz; do bcftools query -l ${vcf} >> ${path_maf}/metadata/${date_dir}/indivsample.tsv ; done
 # ls ${path_maf}/individual_vcf/new_vcf/*.vcf.gz | xargs -n 1 basename | sed 's/_.*$//' | sed 's/\..*$//' | sed 's/b$//' | sed 's/bis$//'> ${path_maf}/metadata/${date_dir}/indivsample.tsv
 
 # Exit pipeline if there are duplicate samples in the within the batch of samples that are going to be analyced
+#GUR: si en la lista de los nuevos samples que va anadir estan los IDs repetidos de las muestras te dice que filtres manualmente
 if [[ $(sort "${path_maf}/metadata/${date_dir}/indivsample.tsv" | uniq -d | wc -l) > 0 ]]
 then
 	echo "Duplicate samples in batch:"
