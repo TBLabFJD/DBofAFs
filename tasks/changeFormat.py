@@ -151,7 +151,8 @@ def main(args):
 
                     freqDicc = freq[index]
                     #print(f"En la mutacion de la linea {index} el  AN es {freqDicc}")
-                    if freqDicc["AF"] != None and freqDicc["AN"]>20:
+                    if freqDicc["AF"] != None:
+                    #gonzalo: if freqDicc["AF"] != None and freqDicc["AN"]>20: 
                         #print(f"Entrando en el if porque la linea {index} su AF!=None y el AN>20")
                         pathoSuffix = sd[index]            
 
