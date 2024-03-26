@@ -74,8 +74,8 @@ for vcf in ${path_maf}/individual_vcf/incorporated_vcf/*.vcf.gz; do bcftools que
 for vcf in ${path_maf}/individual_vcf/new_vcf/*.vcf.gz; do bcftools query -l ${vcf} >> ${path_maf}/metadata/${date_dir}/indivsample.tsv ; done
 # ls ${path_maf}/individual_vcf/new_vcf/*.vcf.gz | xargs -n 1 basename | sed 's/_.*$//' | sed 's/\..*$//' | sed 's/b$//' | sed 's/bis$//'> ${path_maf}/metadata/${date_dir}/indivsample.tsv
 
-# Exit pipeline if there are duplicate samples in the within the batch of samples that are going to be analyced
-#GUR: si en la lista de los nuevos samples que va anadir estan los IDs repetidos de las muestras te dice que filtres manualmente
+# Exit pipeline if there are duplicate samples in the within the batch of samples that are going to be newly added 
+#GUR: si en la lista de los nuevos samples que va a anadir estan los IDs repetidos de las muestras te dice que filtres manualmente y los quites de la carpeta new
 if [[ $(sort "${path_maf}/metadata/${date_dir}/indivsample.tsv" | uniq -d | wc -l) > 0 ]]
 then
 	echo "Duplicate samples in batch:"
@@ -85,6 +85,11 @@ then
 	exit 1
 fi
 
+# ESTE CODIGO LO QUE HACE ES: meter el indivsample.tsv (lista de samples IDS NUEVOS que voy a añadir) y lista de los ya incorporados (multisample.tsv) en mi caso
+#no porque creo la base de datos de 0
+# lo que hace es generar un archivo: avoid_samples.tsv que te indica los sample IDs NUEVOS que son de la misma familia de alguien que habia previamente en la base de datos
+#y luego te crea dup_samples.tsv que es una lista de sample IDs que estas intentando meter que ya estaban previamente en la base de datos (en incorporated)
+# EN MI CASO ESTO NO SIRVE PARA NADA PORQUE NO HABIA NADIE INCORPORADO PREVIAMENTE (todo new)
 
 python ${task_dir}/avoid_family.py \
 --multivcf ${path_maf}/metadata/${date_dir}/multisample.tsv \
@@ -93,6 +98,9 @@ python ${task_dir}/avoid_family.py \
 --output ${path_maf}/metadata/${date_dir}/avoid_samples.tsv \
 --dupout ${path_maf}/metadata/${date_dir}/dup_samples.tsv
 
+
+# los avoid_samples.tsv (esos sample IDs nuevos que son de la misma familia de alguien que habia previamente en la bd) lleva su vcf y su bed a discarded 
+# NO ME PASA A MI EN NINGUN MOMENTO PORQUE CREO LA BASE DE DATOS DE 0
 
 # Moving individual vcf and bed files from related samples to the discarded folders
 for i in $(cat ${path_maf}/metadata/${date_dir}/avoid_samples.tsv);
@@ -104,6 +112,9 @@ done
 
 
 # Rename duplicate samples
+# los VCFs y sus .tbis de las muestras duplicadas (ya estaban en la base de datos con ese ID, o sea es el mismo paciente, puede que antes fuera CES y ahora meto WES)  
+# los renombra con dUpTaGgG_sampleID y los lleva a la carpeta /tmp_vcf/ que se crea a la altura de discarded,incorporated, new
+#DUPLICATE SAMPLES = SON LOS NUEVOS QUE HE INCORPORADO LOS QUE SE RENOMBRAN
 
 mkdir ${path_maf}/individual_vcf/tmp_vcf/
 cd ${path_maf}/individual_vcf/new_vcf/
@@ -118,6 +129,8 @@ do
 	tabix -p vcf dUpTaGgG${vcffile}
 
 done
+
+### renombra los beds asociados a los dup samples que tenemos como dUpTaGgG y LO DEJA METIDO EN NEW_BED CON LOS OTROS COMO ESTABA 
 
 cd ${path_maf}/coverage/new_bed/
 for i in $(cat ${path_maf}/metadata/${date_dir}/dup_samples.tsv);
@@ -141,11 +154,16 @@ echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 # Merge #
 #=======#
 
+#GUR: Basicamente se hace un merge de todos los VCFs, si hay demasiados VCFs entonces se hacen subsets (3 VCFs de 500 cada uno y luego otro merge de esos 3)
+
+
 echo "MERGE" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "MERGE"
 STARTTIME=$(date +%s)
 
 # BCFTOOLS da error si hay muchos vcfs. Para prevenir el error he puesto como máximo 500 vcfs para hacer vcfs intermedios.
+#gur: en realidad esta haciendo listas de 850 VCFs, o sea subset_vcfs_aa, subset_vcfs_ab etc son listas de 850 VCFs, si tengo 20 pues el mismo subset son todos los VCFs iniciales
+#ademas aqui hace de new y de incorporated (no es nuestro caso)
 ls ${path_maf}/individual_vcf/new_vcf/*.vcf.gz ${path_maf}/individual_vcf/incorporated_vcf/*.vcf.gz | split -l 850 - "${path_maf}/tmp/subset_vcfs_"
 
 function MERGED {
@@ -200,6 +218,8 @@ echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 # IMPUTATION #
 #============#
 
+#GUR: coverage info used to differentiaate between a covered and non-covered position
+
 echo "IMPUTATION" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 STARTTIME=$(date +%s)
 echo "IMPUTATION"
@@ -210,6 +230,10 @@ echo "IMPUTATION"
 echo "	Making bed file" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 SUBSTARTTIME=$(date +%s)
 echo "  Making bed file"
+#GUR: se hace un bed file de todas las posiciones que hay en nuestro merged_VCF
+#GUR: In summary, this command extracts variant positions from a compressed VCF file, filters out header lines, formats the output to chromosome start-end positions, 
+# and saves this information in a BED file for further analysis.
+# la cosa es que se hace así chr1: 1234:1234, chr5:667:667 -> o sea en el vcf solo dan la POS entonces esto lo replica en begin y end
 
 bcftools view ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | grep -v '^#' | awk '{ print $1"\t"$2"\t"$2 }' > ${path_maf}/tmp/merged_variant_position.bed
 
@@ -219,11 +243,17 @@ echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "  Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds" 
 
 
-# Make sure there are no overlaping regions so that coverage files have the same number of entries as variants in the merge vcf
+# Make sure there are no overlaping regions so that coverage files have the same number of entries as variants in the merge vcf 
+# GUR: que no haya overlaps en el bed: ejemplo -> si dos pacientes (cada uno con su bed) tienen una mutacion en la misma posicion, en ambos bed hay:
+#por ejemplo: chr1 2:10 y en el otro bed: chr1 4:8, entonces basicamente quiere quitar estas regiones repetidas que son la misma
+#para que al final quede un BED que tenga el mismo numero de lineas que variantes 
 echo "	Remove overlapping regions in new bed files" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 SUBSTARTTIME=$(date +%s)
 echo "  Remove overlapping regions in new bed files"
 
+#Este codigo no lo entiendo mucho porque crea un archivo para borrarlo despues inmediatamente, de hecho el sort ese no altera en nada a los beds 
+#mosdepth genera un bed YA SORTED
+#the script sorts the contents of the current ${file} based on the first column (-k1,1) and then numerically on the second column (-k2,2n).
 for file in ${path_maf}/coverage/new_bed/*.bed; 
 do 
 	sort -k1,1 -k2,2n ${file} > ${path_maf}/coverage/new_bed/tmp.bed ; 
@@ -241,6 +271,11 @@ echo "  Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds"
 echo "	Making coverage files" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 SUBSTARTTIME=$(date +%s)
 echo "  Making coverage files"
+
+#GUR: este codigo coge el merged_variant_position.bed (3678913 filas = # lineas/mutaciones en el VCF)
+#y genera un archivo para cada muestra diciendo que posiciones estan cubiertas en ese vcf. El archivo final es un .txt por cada muestra que se guarda en /tmp/covfiles/
+#el archivo es una columna donde pone . (si la posicion en esa muestra no esta cubierta) o 10:inf (la posicion esta cubierta en 10 reads minimo que es lo que
+#viene en el bed inicial de cada muestra) y así para las 3678913 posiciones iniciales
 
 # for file in $(ls ${path_maf}/coverage/new_bed/*.bed ${path_maf}/coverage/incorporated_bed/*.bed);
 # do 
@@ -313,9 +348,6 @@ echo BEFORE PARALLEL INPUT
 parallel "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
 echo AFTER PARRALEL INPUT
 
-### GUR: commenta eveything de aqui para abajo. pARA COMENTAR QUITAR ALMOHADILLA
-
-#: '
 
 
 
@@ -551,4 +583,4 @@ echo $(date) >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "FINAL:"
 echo $(date)
-#'
+
