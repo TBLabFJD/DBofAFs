@@ -1,5 +1,6 @@
 #!/bin/bash
 
+#importante el path de la linea 331 o por ahi que lo he puesto literal porque el task_dir no me va
 
 module load bedtools
 module load miniconda/3.6
@@ -304,7 +305,12 @@ echo "	Runinng imputeValues.py script" >> ${path_maf}/metadata/${date_dir}/logfi
 SUBSTARTTIME=$(date +%s)
 echo "  Runinng imputeValues.py script"
 
+
+### GUR: aqui vuelve a partir los vcfs y hace una lista de 450/grupo In summary, this command extracts sample names from a VCF file and splits them into multiple files, each containing a subset of sample names. 
 bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp/subset_vcfs_merge_"
+
+##GUR: esta funcion de impute la hace en paralelo abajo para cada grupo de vcfs (lista de 450 del subset_vcfs_merge)
+##lo que hace es imputeValues.py que es meter 0/0 (ref/ref) en el apartado de format para aquellas muestras que tienen la posicion de una mutacion cubierta pero no tienen mutacion
 
 function IMPUTE { 
 	path_maf=${1}
@@ -313,15 +319,27 @@ function IMPUTE {
 
 	iname="$(basename ${filename})"
 
-	# Sepration
+ 	
+	# Separation
+ 	#GUR: separa el merged_vcf en subsets_vcfs according al subset_vcfs_merge list de vcfs
 	bcftools view -S ${filename} --min-ac=0 -O z -o ${path_maf}/tmp/${iname}_merged.vcf.gz ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz
 	tabix -p vcf ${path_maf}/tmp/${iname}_merged.vcf.gz
 
 	# Imputation
+ 	#GUR: reads a gzipped VCF file, finds the line number of the #CHROM header, 
+  	#GUR: calculates the number of rows to skip (excluding the header), and then extracts those rows (excluding the header) into a new VCF file.
+
+   	#basicamente extrae el header del subset_aa merged_vcf y lo pega en uno que se llame subset_aa_imputed_vcf -> despues el imputed_vcf lo va rellenando
+    	#dentro del script de imputeValues.py, tambien necesita skip_rows para saber a partir de donde empieza a rellenar el imputed_vcf
+     
 	skiprows=$(bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n 500 | grep -n "#CHROM" | sed 's/:.*//')
 	numrows="$((${skiprows}-1))"
 	bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n ${numrows} > ${path_maf}/tmp/${iname}_imputed.vcf
 
+	#GUR: al imputeValues le pasamos: el subset_aa_merged_vcf, el subset_aa_imputed_vcf, el path de los tmp/covfiles/ y el skiprows apara
+ 	#GUR: que sepa a partir de donde empezar a rellenar y el cluster sample= subset_aa
+  	#GUR: creo que no es rellenar, sino sacar el format column directamente
+  	
 	#python ${task_dir}/imputeValues.py \
         python /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks/imputeValues.py \
 	--mergedvcf ${path_maf}/tmp/${iname}_merged.vcf.gz \
@@ -349,7 +367,7 @@ parallel "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_v
 echo AFTER PARRALEL INPUT
 
 
-
+########## AHORA SE HACE EL MERGE DE LOS DISTINTOS IMPUTED_vcf -> subset_vcfs_merge_aa, subset_vcfs_merge_ab etc ...
 
 ###GUR: PASA LO MISMO QUE ANTES, QUE HAY QUE CONTEMPLAR LA IDEA DE TENER MENOS DE 500 VCFs y que solo hay un subset_vcf_aa, o sea no hay varios entonces
 ##no se puede hacer bcftools merge:
