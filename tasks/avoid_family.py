@@ -50,17 +50,23 @@ def main():
     
     
     # Remove familiars from the samples of the database
+    #GUR: mira si mis FAMILY_IDS de mis SAMPLE de mi metadata.tsv que yo meto (family_df) estan en el multi_vcf (la lista de muestras ya incorporadas), 
+    # esto da error porque no tengo multi_vcf porque yo no tengo muestras incorporadas porque lo creo de 0. 
+    #Esto sirve para ver si previamente habia miembros de la familia en la base de datos y ahora estoy añadiendo nuevos miembros de la misma familia
     
     family_set = set(family_df[family_df["SAMPLE"].isin(multivcf_list)]["FAMILY"]) # Get all the family ID of all the samples of the database
     family_set.remove("-") # Do not take into account samples without family ID
     muestras_out = list(family_df[family_df["FAMILY"].isin(family_set)]["SAMPLE"]) # Get all family members of those families
-    
+
+    #extrae los SAMPLE IDs de la misma familia de la nueva lista de los VCFs
     muestras_out = [x for x in muestras_out if x in singlevcf_list] # Not remove familiars from the samples of the database
     muestras_out = [x for x in muestras_out if x not in multivcf_list] # Not remove duplicate samples from the remove list
     
     
     
     # Remove familiars among the new samples to include
+    # GUR: O sea las nuevas muestras que intento incorporar si son de alguien de la misma familia que habia antes entonces NO SE AÑADEN
+    # A LA NUEVA BD -> 
     
     muestras_in = [x for x in singlevcf_list if x not in muestras_out] # Only working with the samples that are not already excluded
     muestras_in = [x for x in muestras_in if x not in multivcf_list] # Not remove duplicate samples from the remove list
@@ -82,6 +88,9 @@ def main():
 
 
     # Generate and write the output file
+    #GUR: saca una lista que se llama muestras_out -> luego es avoid_samples.tsv -> muestras que no voy a queerer
+   # en avoid samples se meten LOS SAMPLE IDS nuevos que estoy intentando incorporar que estanr elacionados con un familiar que ya estaba en la base de datos previa
+   #Esto no pasara porque yo no tengo incorporated samples de antes, directamente creo la base de datos nueva entonces dup_samples.tsv no se crea
     
     muestras_out = set(muestras_out)
     #muestras_out = [item for sublist in muestras_out for item in sublist] # Flat the list of samples that are going to be removed
@@ -95,6 +104,7 @@ def main():
 
 
     # Get duplicates
+   #aqui se obtinene el archivo dup_samples que es el que te dice si estas metiendo un sample_ID que ya estviera en la base de datos previa 
     
     duplicates_out = [x for x in singlevcf_list if x in multivcf_list] # Get duplicate samples to change the name 
    
