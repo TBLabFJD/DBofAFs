@@ -412,6 +412,26 @@ echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 # PLINK relationship calculation #
 #================================#
 
+Pasos 
+
+#1) Primero se crean e insertan los IDs de los SNPs en la columna ID del VCF. Este ID se crea pegando el cromosoma_posición_referencia_alternativa. Este paso sirve para que en el pruning se pueda identificar de forma unívoca los SNPs que se quedan para el análisis de parentesco y los que se descartan. 
+
+#2)Después se realiza de forma paralela en análisis de parentesco y la tabla con los porcentajes de cobertura por muestra. 
+
+#3) Para el análisis de parentesco primero se filtran aquellas regiones (SNPs) cubiertas por menos de un 95% de las muestras y un MAF (minor allele frequency) menor del 5%.  
+
+ #LD-based variant pruning aims to identify and remove variants that are in high linkage disequilibrium with each other.
+#4) Después se realiza el pruning que consiste en quedarse con aquellas SNPs que segregan de forma independiente, esto es que NO están en desequilibrio de ligamiento. Finalmente se realiza el paso del cálculo del parentesco. 
+
+#4) Para obtener una tabla con los porcentajes de cobertura de las muestras, primero realizamos un filtro para quedarnos con aquellas regiones o SNPs que están en más de un 98% de las muestras. Y a continuación se crea la tabla con la información de cobertura. 
+
+#5) Por último se realiza la priorización de las muestras que se van a excluir. Para ellos se va a tener en cuenta (en este orden): 1) El número de interaciones, 2) Que no sean distrofias de retina, y 3) falta de genotipo (baja cobertura). De esta forma descartamos el menor número de muestras, el menor número de muestras de pacientes con distrofias de retina y descartamos muestras con menor cobertura. 
+
+ 
+
+
+
+
 echo "PLINK RELATIONSHIP CALCULATION" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 STARTTIME=$(date +%s)
 echo "PLINK RELATIONSHIP CALCULATION"
@@ -423,10 +443,70 @@ bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o imputed_${date_p
 geno=0.05
 maf=0.05
 
+#obtain plink binary format bed file (merged.bed -> stored in /tmp/plinkout-> se crea .bed, .bim, .fam
+#.bed -> archivo binario, .bim (archivo con crom,pos,id,ref,alt), .fam (sample id = muestra, family id = muestra otra vez, paternal id = 0, maternal id =0, sex = 0, phenotype=-9)
 plink --vcf imputed_${date_paste}_ID_tmp.vcf.gz --make-bed --out merged
+
+#performs QC filtering on the merged dataset. It removes:
+#variants with missing genotype rates exceeding the specified threshold (geno=0.05) -> quito variantes geno<95%
+#less than 95% of samples have non-missing genotypes for that SNP.
+#genotyping rate indicates the percentage of individuals for whom genotypic information is available at a given genetic variant
+#SI LAS VARIANTES NO ESTAN CUBIERTAS ENTONCES NO TIENEN INFO DEL GENOTIPO GT:AD:DP etc
+#For example, if there are 100 individuals in a dataset and genotypic data is available for 90 of them at a particular SNP, 
+#then the genotyping rate for that SNP would be 90%
+#A high genotyping rate is desirable in genetic studies because it ensures that there is sufficient data available for analysis, 
+#improving the reliability and power of downstream analyses such as genome-wide association studies (GWAS) or population genetics analyses.
+#Low genotyping rates can be indicative of various issues such as genotyping errors, poor sample quality, or technical issues during genotyping. It's often necessary to filter out genetic variants with low genotyping rates before conducting genetic analyses to ensure the reliability of the results.
+
+#MAF = frequency of the less common allele among all alleles observed for a particular genetic variant within a population.
+#variants with a minor allele frequency below the specified threshold (maf=0.05) -> quito variantes MAF<5%
+#t ranges from 0 to 0.5, where 0 represents that the less common allele is absent in the population, 
+#and 0.5 indicates that the less common allele is as frequent as the more common allele.
+#Variants with low MAFs may have less statistical power to detect associations in GWAS due to 
+#smaller sample sizes of individuals carrying the less common allele. Therefore, researchers often filter out 
+#variants with very low MAFs before conducting association analyses.
+
+#CREO QUE EL MAF ES EL PARAMETRO QUE TENDRIAMOS QUE MODIFICAR PARA INCLUIR MÁS VARIANTES (defauls MAF=0.01)
+#(ejemplo MAF=0.01 -> incluir las minor alleles que sean hasta un 1% de frecuentes o menos maf=0.001 (0.1%) en vez de hasta 5% como es ahora -> detectar variantes raras
+# For example, rare variant association tests may require lower MAF thresholds to detect associations, while common variant analyses may focus on variants with higher MAFs.
+
+#individuals with missing genotype rates exceeding the threshold of 100% (all missing) -> no quita a nadie porque el merged_geno_maf.fam sigue teniendo 21 vcfs (21 sample IDs o sea todos)
+
+#ESTE ARCHIVO SON LAS VARIANTES FILTRADAS (LAS QUE SUPUESTAMENTE QUITO: APROX 124mil de las 3 millones que hay en imputed_vcf)
 plink --bfile merged --make-bed --geno ${geno} --mind 1 --maf ${maf} --out merged_geno_maf
+
+
+#ESTA SIGUIENTE PARTE EMPIEZA DEL MRRGED_GENO_maf = 124 MIL variantes aprox
+#performs LD-based variant pruning to reduce redundancy in the dataset. 
+#When two variants are in high LD (r2 alto), it means that the alleles at these variants tend to be inherited together 
+#more often than expected by chance.
+#It identifies a subset of variants that are in approximate linkage equilibrium (LD pruning) 
+#using the specified parameters (50 5 0.5), meaning that pairs of variants with an 
+#r² value above 0.5 (entre 0 y 1 de menos a más linkage desequilibrium -> quito los high) within a 50-SNP window are removed. 
+
+#Window Size (50 SNPs): LD-based variant pruning is performed within a sliding window of a specified size, which contains a certain 
+#number of neighboring SNPs (genetic variants). In this case, a window size of 50 SNPs is used.
+#Step Size (5 SNPs): The window moves along the dataset in steps determined by the step size. For example, with a step size of 5 SNPs, the window shifts by 5 SNPs at a time.
+#r² Threshold (0.5): LD-based pruning removes pairs of variants within each window that have an r² value above the specified threshold. 
+#The r² value quantifies the strength of LD between two variants 
+#and ranges from 0 to 1, with higher values indicating stronger LD. 
+#In this case, pairs of variants with an r² value above 0.5 within each 50-SNP window are removed.
+
+#-> lo de carol que dice que alrededor de una mutacion 
+#es tipico que haya una ventana de unos pocos SNPs que los tenga la madre tambien
 plink --bfile merged_geno_maf --geno ${geno} --mind 1 --maf ${maf} --indep-pairwise 50 5 0.5
+
+#extracts the subset of variants identified in the LD-based pruning step (plink.prune.in) and 
+#creates a new PLINK dataset containing only these pruned variants -> se crea .bed, .bim, .fam
+
+#aprox 70 mil/140 mil variantes de las filtradas antes -> variantes que segregan de forma independiente (me quedo con las de r2<0.5 -> NO ESTAN EN LINKAGE DESEQUILIBRIUM)
 plink --bfile merged_geno_maf --extract plink.prune.in --make-bed --out merged_geno_maf_prunned
+
+#This command is using PLINK to calculate pairwise relatedness or genetic similarity between individuals in the dataset specified by the binary file merged_geno_maf_prunned.
+#--genome indicates that you want to compute genomic relationships.
+#--min 0.05 specifies a minimum allele frequency threshold for variants to be included in the analysis.
+
+#tsv con estas columnas: FID1	IID1	FID2	IID2	RT	EZ	Z0	Z1	Z2	PI_HAT	PHE	DST	PPC	RATIO
 plink --bfile merged_geno_maf_prunned --genome --min 0.05 --out relationship_raw
 sed  's/^ *//' relationship_raw.genome > relationship_tmp.tsv
 sed -r 's/ +/\t/g' relationship_tmp.tsv > relationship.tsv
