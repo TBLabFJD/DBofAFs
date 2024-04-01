@@ -21,6 +21,7 @@ import argparse
 #ir a Graciela@work para ver como es el format en el merged_vcf vs el imputed_vcf
 #https://idcsalud-my.sharepoint.com/personal/graciela_uria_quironsalud_es/_layouts/15/Doc.aspx?sourcedoc={71ca5f03-8e2d-4360-83d8-070120f058bd}&action=edit&wd=target%28DATOS_CRUDOS_DB.one%7C3ed9f2bf-bc83-4986-a8bd-d24142f67734%2FMERGED_VCF%20vs%20IMPUTED_VCF%7C503fc902-9a2e-4eec-a3dd-385afceb68e8%2F%29&wdorigin=NavigationUrl
 
+#ESTO lo hace recibiendo el archivo del variantCov de cada muestra y si tiene 10:inf la imputa poniendo 0/0 (muestra cubierta) y si no lo deja como esta (un .)
 def main(args):
 
     # defining data location
