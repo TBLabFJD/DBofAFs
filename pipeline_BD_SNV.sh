@@ -588,13 +588,14 @@ mkdir "${path_maf}/coverage/discarded_bed_tmp"
 
 # Moving individual vcf and bed files from related samples to the discarded folders
 
+#if there are no lines in listas_muestras_excluidas (en mi caso no existe el archivo porque todas mis muestras empiezan en new vcf (no hay incorporated)
 if [[ $(cat ${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv | wc -l) == 0 ]]
 then
 	mv ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz 
 	mv ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz 
 else
 	# Removing samples from merged and imputed vcf
-
+	#de mi merged y mi imputed grande QUITAR las muestras de exlcuidas vcf (en format se quita la columna de la muestra excluida, todavia no estan calculadas las frecuencias)
 	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
 	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 
