@@ -1,3 +1,9 @@
+#GUR: esto es lo del pi_hat de Berta
+#saca dos tsvs que dicen que muestras hay que excluir porque esten emparentadas:
+#en el ejemplo de gonzalo (en su bd) estaban emparentadas por ejemplo: 14-1773 y dUpTaGgG14-1773 porque claro es que se estaba metiendo la misma muestra pero igual sntes era CES y ahora era un WES
+#decide quedarse con la nueva dUpTaGgG14-1773 porque esta más cubierta  (tienen pi_hat=1 logicamente)
+
+
 
 # Autor: Gonzalo Núñez Moreno
 # Fecha: 17/03/2021
@@ -7,12 +13,17 @@
 
 args = commandArgs(TRUE)
 
+#metadata inicial de sampleID, familyID y fenotipo
 ruta_pacientes = args[1]
 pacientes = read.table(ruta_pacientes, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 
+#relationship.tsv -> info del pi_hat de cada par de muestras
 path_relation = args[2]
 df_relation = read.table(path_relation, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 
+#variantes con info del genotipo en cada muestra (
+# Las columnas que usa gonzalo en el filtro_parentesco.R es la resta (cuantas variantes tienen info del genotipo en cada muestra=variantes cubiertas): df_stad$COVERED = df_stad$N_GENO - df_stad$N_MISS
+#missing_stats.tsv
 ruta_stad = args[3]
 df_stad = read.table(ruta_stad, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 df_stad$COVERED = df_stad$N_GENO - df_stad$N_MISS
@@ -22,7 +33,7 @@ df_stad$COVERED = df_stad$N_GENO - df_stad$N_MISS
 
 
 # Filtering
-
+#extraer sampleIDS EMPARENTADOS con más el 0,35 del pi_hat
 df_35 = df_relation[df_relation$PI_HAT > 0.35,]
 df_35_copy = df_35
 
