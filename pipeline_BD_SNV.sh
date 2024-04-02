@@ -275,7 +275,7 @@ echo "  Making coverage files"
 
 #GUR: este codigo coge el merged_variant_position.bed (3678913 filas = # lineas/mutaciones en el VCF)
 #y genera un archivo para cada muestra diciendo que posiciones estan cubiertas en ese vcf. El archivo final es un .txt por cada muestra que se guarda en /tmp/covfiles/
-#el archivo es una columna donde pone . (si la posicion en esa muestra no esta cubierta) o 10:inf (la posicion esta cubierta en 10 reads minimo que es lo que
+#el archivo es una columna donde pone . (si la posicion en esa muestra no esta cubierta) o 10:inf (la posicion esta cubierta con 10 reads minimo que es lo que
 #viene en el bed inicial de cada muestra) y así para las 3678913 posiciones iniciales
 
 # for file in $(ls ${path_maf}/coverage/new_bed/*.bed ${path_maf}/coverage/incorporated_bed/*.bed);
@@ -416,18 +416,28 @@ Pasos
 
 #1) Primero se crean e insertan los IDs de los SNPs en la columna ID del VCF. Este ID se crea pegando el cromosoma_posición_referencia_alternativa. Este paso sirve para que en el pruning se pueda identificar de forma unívoca los SNPs que se quedan para el análisis de parentesco y los que se descartan. 
 
-#2)Después se realiza de forma paralela en análisis de parentesco y la tabla con los porcentajes de cobertura por muestra. 
+#2)Después se realiza de FORMA PARALELA en análisis de parentesco (A) y la tabla con los porcentajes de cobertura por muestra (B). 
 
-#3) Para el análisis de parentesco primero se filtran aquellas regiones (SNPs) cubiertas por menos de un 95% de las muestras y un MAF (minor allele frequency) menor del 5%.  
+# A) análisis de parentesco: 1) se filtran aquellas regiones (SNPs) cubiertas por menos de un 95% de las muestras y un MAF (minor allele frequency) menor del 5%. 
+# NOS QUEDAMOS CON 124,783 VARIANTES QUE ESTAN BIEN -> ESTAN EN GENO=+95% DE LAS MUESTRAS: Y maf>5%
+	#2) Después se realiza el pruning que consiste en quedarse con aquellas SNPs que segregan de forma independiente, esto es que NO están en desequilibrio de ligamiento.
+	#NOS QUEDAMOS CON 70,267/124,783 VARIANTES QUE ESTAN BIEN -> NO ESTAN EN DESEQUILIBRIO DE LIGAMIENTO (R2<0.5)
+	#3) Finalmente se realiza el paso del cálculo del parentesco: Tabla de relaciones con los coeficientes de relación (PI_HAT): plink --bfile merged_geno_maf_prunned --genome --min 0.05 --out relationship_raw
+        # se genera el archivo relationship.tsv: #tsv con estas columnas: FID1	IID1	FID2	IID2	RT	EZ	Z0	Z1	Z2	PI_HAT	PHE	DST	PPC	RATIO
 
- #LD-based variant pruning aims to identify and remove variants that are in high linkage disequilibrium with each other.
-#4) Después se realiza el pruning que consiste en quedarse con aquellas SNPs que segregan de forma independiente, esto es que NO están en desequilibrio de ligamiento. Finalmente se realiza el paso del cálculo del parentesco. 
+# B) Tabla con los porcentajes de cobertura de las muestras: -> 1) (--missing) Realizamos un filtro para quedarnos con aquellas regiones o SNPs que están en más de un 98% de las muestras. 
+Y a continuación se crea la tabla con la información de cobertura. -> se mete la tabla en el filtro_parentesco.R
 
-#4) Para obtener una tabla con los porcentajes de cobertura de las muestras, primero realizamos un filtro para quedarnos con aquellas regiones o SNPs que están en más de un 98% de las muestras. Y a continuación se crea la tabla con la información de cobertura. 
+#TOTAL: a filtro_parentesco.R se le pasa: 
+#1) relationship.tsv: tabla con las relaciones del calculo de parentesco; 
+#2) missing_stats.TSV: tabla con % de la cobertura de las muestras;
+#3) tabla metadata inicial: sample_Id, family_ID, fenotipo
 
-#5) Por último se realiza la priorización de las muestras que se van a excluir. Para ellos se va a tener en cuenta (en este orden): 1) El número de interaciones, 2) Que no sean distrofias de retina, y 3) falta de genotipo (baja cobertura). De esta forma descartamos el menor número de muestras, el menor número de muestras de pacientes con distrofias de retina y descartamos muestras con menor cobertura. 
 
- 
+#3) Filtro_parentesto.R:  priorización de las muestras que se van a excluir. Para ellos se va a tener en cuenta (en este orden): 1) El número de interaciones, 2) Que no sean distrofias de retina, y 3) falta de genotipo (baja cobertura). De esta forma descartamos el menor número de muestras, el menor número de muestras de pacientes con distrofias de retina y descartamos muestras con menor cobertura. 
+OUTPUT:
+tabla_muestras_excluidas.tsv \
+lista_muestras_excluidas.tsv
 
 
 
@@ -506,13 +516,41 @@ plink --bfile merged_geno_maf --extract plink.prune.in --make-bed --out merged_g
 #--genome indicates that you want to compute genomic relationships.
 #--min 0.05 specifies a minimum allele frequency threshold for variants to be included in the analysis.
 
+######## ESTE ES EL ULTIMO PASO DEL ANALISIS DE PARENTESCO: OBTENER EL RELATIONSHIP ENTRE LOS INDIVIDUALS EN MERGED_GENO_MAF_PRUNED
+### miro pi_hat= X (debe ser menor de 0.25) y se ve si las dos muestras en IID1 y IID2 estan relacionadas (tabla con 99 filas de todas las posibles parejas de sample ID)
+#por alguna razon solo se estan comparando 16 muestras (de los 21 vcfs) -> probablemente porque las 70mil variantes con las que nos hemos quedado solo tienen info del genotipo para 16/21 vcfs
 #tsv con estas columnas: FID1	IID1	FID2	IID2	RT	EZ	Z0	Z1	Z2	PI_HAT	PHE	DST	PPC	RATIO
+
+#PLINK: Programa para realizar GWAS (genome-wide association analysis). Se enfoca principalmente en el análisis genotipo/fenotipo. 
+#En la pipeline se usa para determinar la homocigosidad (endogamia). 
+#Berta nos lo ha recomendado para realizar el análisis de muestras emparentadas (Identity-By-Descent=sharing of identical genetic material between two individuals due to common ancestry). 
+#Ella determina que dos muestras están emparentadas si tienen un PI_HAT mayor de 0'25. 
+#Hay que hacer una selección de las SNPs que queremos usar porque no tiene en 
+#cuenta el desequilibrio de ligamiento (Linkage Disequilibrium - LD) ni la frecuencia de una SNV en la población. (ya lo hemos hecho con merged_geno_maf_prunned)
+#Recomiendan usar un algoritmo basado en LD para recortar el número de SNPs antes de invocar la función "Identity-by-descent" (es la  que viene aqui abajo)
+
+#Aqui hacemos Identity by descent (IBD function de PLINK es este comando) porque obtenemos el pi_hat value entre cada par de muestras -> IBD 
 plink --bfile merged_geno_maf_prunned --genome --min 0.05 --out relationship_raw
 sed  's/^ *//' relationship_raw.genome > relationship_tmp.tsv
 sed -r 's/ +/\t/g' relationship_tmp.tsv > relationship.tsv
 rm relationship_tmp.tsv
 
+######### AQUI SE OBTIENE LA TABLA CON EL NUMERO DE REGIONES CUBIERTAS #######
 
+#GUR: En primera instancia gonzalo antes de hacer la tabla de cobertura filtraba las snps que estan presentes en un 98% (mirar dibujo del drive gonzalo: page: Protocolo detección y priorización de familiares )
+#https://idcsalud-my.sharepoint.com/personal/gonzalo_nunezm_quironsalud_es/_layouts/15/Doc.aspx?sourcedoc={cbf93917-60d0-4d11-b3d9-996b67df4f8a}&action=edit&wd=target%28Base%20de%20datos%20SNVs.one%7C7dab3c87-2cb2-48ad-9814-ec2b339c3266%2FProtocolo%20detecci%C3%B3n%20y%20priorizaci%C3%B3n%20de%20familiares%7Cb6acac9b-f5a4-4635-a0f7-9160ab65cde1%2F%29&wdorigin=NavigationUrl
+#plink --vcf $vcf_file --make-bed --geno 0.02 --mind 1 --out merged_geno02 
+#plink --bfile merged_geno02 --missing --out missing_geno_stats_raw 
+
+#Lo que se hace ahora: directamente hacer lo de missing sobre todas las SNPS (Protocolo V2 de los aputntes del drive de gonzalo)
+
+### sacamos las estadisticas para cada uno de los VCFs: nos da un .tsv con el FID y IID (se supone que es faimly ID y sample ID pero es solo el sampleID copiado en ambas columnas (en la bd previa es lo mismo)
+#N_MISS: Number of Missing Genotypes - This column represents the count of missing genotypes for each individual. Genotypes could be missing due to various reasons such as genotyping errors, low-quality DNA samples, or technical issues during genotyping.
+#N_GENO: Number of Genotyped Markers - This column indicates the total number of genotyped markers for each individual. It provides context for assessing the proportion of missing genotypes.
+#genotype markers: specific positions within an individual's DNA sequence that are known to exhibit variation within a population hay 3,665,949 en mi VCF (distinto del numero de mutaciones: 3,678,913
+#F_MISS: Proportion of Missing Genotypes - This column represents the proportion of missing genotypes for each individual, calculated as the ratio of missing genotypes (N_MISS) to the total number of genotyped markers (N_GENO). It provides a measure of data completeness for each individual.
+
+# Las columnas que usa gonzalo en el filtro_parentesco.R es la resta (cuantas variantes tienen info del genotipo en cada muestra): df_stad$COVERED = df_stad$N_GENO - df_stad$N_MISS
 plink --bfile merged --missing --out missing_stats_raw
 sed  's/^ *//' missing_stats_raw.imiss > missing_stats_tmp.tsv
 sed -r 's/ +/\t/g' missing_stats_tmp.tsv > missing_stats.tsv
