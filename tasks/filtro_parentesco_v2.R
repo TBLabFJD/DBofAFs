@@ -1,7 +1,8 @@
 #GUR: esto es lo del pi_hat de Berta
 #saca dos tsvs que dicen que muestras hay que excluir porque esten emparentadas:
 #en el ejemplo de gonzalo (en su bd) estaban emparentadas por ejemplo: 14-1773 y dUpTaGgG14-1773 porque claro es que se estaba metiendo la misma muestra pero igual sntes era CES y ahora era un WES
-#decide quedarse con la nueva dUpTaGgG14-1773 porque esta más cubierta  (tienen pi_hat=1 logicamente)
+#decide quedarse con la nueva dUpTaGgG14-1773 porque esta más cubierta (la resta de los totales-miss=df_stad$COVERED = df_stad$N_GENO - df_stad$N_MISS  
+se hace un df (tabla_muestras_excluidas.tsv) con columnas que son: muestra que se va a quitar, su emparejada, el zo,z1,z2 y pihat de esas dos muestras (relationship.tsv), y el nmiss y ngeno de la muestra que se va a quitar (missing_stats.tsv)
 
 
 
