@@ -8,9 +8,12 @@ import argparse
 def main(args):
 
     # defining data location
-
+    #GUR:inputs
+    #PONE MERGEDVCF PERO ESTA PASANDO EL IMPUTES
     mergedVCF = args.multivcf
     metadata = args.pathology
+    
+    #GUR:outputs
     mafdb_file = args.mafdb
     sample_group_file = args.samplegroup 
 
@@ -22,6 +25,7 @@ def main(args):
     #mt = hl.import_vcf(mergedVCF, force_bgz=True, reference_genome='GRCh38',contig_recoding = mychrrename, call_fields=['GT','PGT'], array_elements_required=False)
 
     ##en caso del genoma 38: no hay que set el parametro contig_recoding porque los cromosomas ya vienen siendo chr1, chr2 y eso es lo que queremos: https://discuss.hail.is/t/contig-1-is-not-in-the-reference-genome-grch38-error/1841
+    #EXTRAE LOS GENOTIPOS Y EL PHASED GENOTYPE (PGT)
     mt = hl.import_vcf(mergedVCF, force_bgz=True, reference_genome='GRCh38', call_fields=['GT','PGT'], array_elements_required=False)
     
 
