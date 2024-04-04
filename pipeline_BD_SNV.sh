@@ -420,13 +420,13 @@ Pasos
 
 # A) análisis de parentesco: 1) se filtran aquellas regiones (SNPs) cubiertas por menos de un 95% de las muestras y un MAF (minor allele frequency) menor del 5%. 
 # NOS QUEDAMOS CON 124,783 VARIANTES QUE ESTAN BIEN -> ESTAN EN GENO=+95% DE LAS MUESTRAS: Y maf>5%
-	#2) Después se realiza el pruning que consiste en quedarse con aquellas SNPs que segregan de forma independiente, esto es que NO están en desequilibrio de ligamiento.
+	#2) Después se realiza el pruning sobre las 124,783 variantes obtenidas que consiste en quedarse con aquellas SNPs que segregan de forma independiente, esto es que NO están en desequilibrio de ligamiento.
 	#NOS QUEDAMOS CON 70,267/124,783 VARIANTES QUE ESTAN BIEN -> NO ESTAN EN DESEQUILIBRIO DE LIGAMIENTO (R2<0.5)
 	#3) Finalmente se realiza el paso del cálculo del parentesco: Tabla de relaciones con los coeficientes de relación (PI_HAT): plink --bfile merged_geno_maf_prunned --genome --min 0.05 --out relationship_raw
         # se genera el archivo relationship.tsv: #tsv con estas columnas: FID1	IID1	FID2	IID2	RT	EZ	Z0	Z1	Z2	PI_HAT	PHE	DST	PPC	RATIO
 
-# B) Tabla con los porcentajes de cobertura de las muestras: -> 1) (--missing) Realizamos un filtro para quedarnos con aquellas regiones o SNPs que están en más de un 98% de las muestras. 
-Y a continuación se crea la tabla con la información de cobertura. -> se mete la tabla en el filtro_parentesco.R
+# B) Tabla con los porcentajes de cobertura de las muestras: -> 1) (--missing) se crea la tabla con la información de cobertura. -> se mete la tabla en el filtro_parentesco.R
+#antes gonzalo hacia un filtro previo para quedarnos con aquellas regiones o SNPs que están en más de un 98% de las muestras (geno=0.02) pero ahora lo hace para todas las variantes
 
 #TOTAL: a filtro_parentesco.R se le pasa: 
 #1) relationship.tsv: tabla con las relaciones del calculo de parentesco; 
@@ -588,7 +588,8 @@ mkdir "${path_maf}/coverage/discarded_bed_tmp"
 
 # Moving individual vcf and bed files from related samples to the discarded folders
 
-#if there are no lines in listas_muestras_excluidas (en mi caso no existe el archivo porque todas mis muestras empiezan en new vcf (no hay incorporated)
+#if there are no lines in listas_muestras_excluidas (en mi caso no existe el archivo porque todas mis muestras empiezan en new vcf 
+# (no hay incorporated) entonces el archivo imputed_tmp.vcf se convierte en el oficial (incorportated.vcf) y el merged igual 
 if [[ $(cat ${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv | wc -l) == 0 ]]
 then
 	mv ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz 
@@ -596,7 +597,10 @@ then
 else
 	# Removing samples from merged and imputed vcf
 	#de mi merged y mi imputed grande QUITAR las muestras de exlcuidas vcf (en format se quita la columna de la muestra excluida, todavia no estan calculadas las frecuencias)
-	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
+ 	#basicamente llama a bcftools view -S que directamente quita las muestras de la lista y el ---min-ac=1 dice que se quede solo con las variantes que tienen un allele_count=1
+  	#luego con el sed corta el string de "dUpTaGgG" de la columna del format de los sampleIDs nuevos que se llaman asi (solo de los que eran duPP que ahora se crean siendo el sample oficial
+	#esto lo hace para el imputed y para el merged.vcf
+ 	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
 	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 
 	for i in $(cat ${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv);
@@ -610,6 +614,7 @@ else
 
 
 	# Rename duplicate samples
+ 	#los vcfs de cada muestra que habia en individual con el nombre dUpTaGgG los abre y quita esos "dUpTaGgG" que hay dentro del VCF
 
 	for vcffile in ${path_maf}/individual_vcf/*/dUpTaGgG*.gz 
 	do
@@ -627,6 +632,7 @@ else
 	# rename s/"dUpTaGgG"/""/g ${path_maf}/coverage/new_bed/*
 
 	# util-linux rename
+ 	#quita el dUpTaGgG de todos los filenames 
 	rename "dUpTaGgG" "" ${path_maf}/individual_vcf/incorporated_vcf/* # The util-linux version, with syntax rename fgh jkl fgh*
 	rename "dUpTaGgG" "" ${path_maf}/individual_vcf/discarded_vcf_tmp/*
 	rename "dUpTaGgG" "" ${path_maf}/individual_vcf/new_vcf/*
@@ -659,6 +665,34 @@ mkdir "${path_maf}/db/${date_dir}"
 
 cd ${path_maf}/db/${date_dir}/
 
+#Esta funcion es la que usa el paquete de HAIL que calcula las frecuencias alelicas. Coge el imputed VCF de entrada (3,678,913 variantes) y genera el archivo MAFdB que 
+#tiene 3 campos: locus (chr:pos), alelos (ref,alt) y el AN,AC y AF de cada disease "CATEGORY" y de cada pseudocontrol
+#Es importante destacar que el MAFdb.tab tiene más variantes que el imputed (3,733,431) pero esto es solo porque en el imputed dan las variantes por posicion (una misma posicion tiene varias variantes pero lo dan en 1 linea):
+#ejemplo chr1:943526 ref:CTTTTTT, alt:CTT,CTTTT,CTTT,CT,C,CTTTTT -> es decir en esta posicion hay 6 posibles variantes distintas, con disitntas frecuencias que se ven en el info field: AF=0.5,1,0.5,0.5,0.5,0.5 y AC=9,7,8,1,1,3
+#el MAFfb.tab lo separa en varias lineas que estan en la misma posicion 
+#ej chr1:943526 ref:CTTTTTT, alt:CTT AF=0.5 y AC=9
+#ej chr1:943526 ref:CTTTTTT, alt:CTTTT AF=1 y AC=7
+#ej chr1:943526 ref:CTTTTTT, alt:CTTT AF=0.5,1,0.5,0.5,0.5,0.5 y AC=9,7,8,1,1,3
+#ej chr1:943526 ref:CTTTTTT, alt:CT
+#ej chr1:943526 ref:CTTTTTT, alt:C
+#ej chr1:943526 ref:CTTTTTT, alt:CTTTTT 
+
+#Entonces el MAFdb.tab ya es directamente la base de datos, tiene: 3,733,431 variantes (+ la linea del head)
+#el final MAFdb_AN20_2024_03_26.vcf tiene el mismo numero de variantes (no se filtran variantes vamos)
+#el samplegroup.txt es las combinaciones que hay de pseudocontrol, disease para cada category.
+#ej: -> esto de aqui abajo - DS=disease, P=pseudocontrol
+#DS	RP
+#DS	MD
+#DS	Kabuki
+#DS	LCA
+#DS	OPA
+#P	RP
+#P	MD
+#P	Kabuki
+#P	LCA
+#P	OPA
+
+
 
 python ${task_dir}/callMAF.py \
 --multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
@@ -667,13 +701,18 @@ python ${task_dir}/callMAF.py \
 --samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
 
 
+#Recibe el imputed.vcf, el archivo de las frecuencias alelicas y el samplegroup.txt y ya genera la base de datos en formato VCF
+#es lo mismo que el MAFdb.tab (la zona fix del VCF, la mutacion y en el info field las frecuencias alelicas por enfermedad)
+#y ademas tiene el META field de un vcf (las header lines de ##) y el genotype field (esto ultimo vacio, no tiene nada de info de los pacientes en individual)
+#la unica cosa a destacar que hace es que si la variante en cuestion esta cubierta por menos de 20 alelos (AN<20) entonces no da la info de las frecuencias (en el vcf en 
+#el campo del info field pone un .
 python ${task_dir}/changeFormat.py \
 --multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
 --vcfout ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf \
 --mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
 --samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt
 
-
+#comprimir y hacer el index
 bgzip -c ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf > ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
 tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
 
