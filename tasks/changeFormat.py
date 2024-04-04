@@ -151,6 +151,8 @@ def main(args):
 
                     freqDicc = freq[index]
                     #print(f"En la mutacion de la linea {index} el  AN es {freqDicc}")
+                    #esta pegando las frecuenicas por enfermedades, lo unico que si la variante en cuestion esta cubierta por menos de 20 alelos (AN<20) 
+                    #no le pone la informacion del MAFdbtab (defa en el info field un .)
                     if freqDicc["AF"] != None and freqDicc["AN"]>20:
                         #print(f"Entrando en el if porque la linea {index} su AF!=None y el AN>20")
                         pathoSuffix = sd[index]            
