@@ -594,7 +594,7 @@ mkdir "${path_maf}/coverage/discarded_bed_tmp"
 
 # Moving individual vcf and bed files from related samples to the discarded folders
 
-#if there are no lines in listas_muestras_excluidas (en mi caso no existe el archivo porque todas mis muestras empiezan en new vcf 
+#if there are no lines in listas_muestras_excluidas (en mi caso no existe el archivo porque todas las muestras estan emparentadas entre sí con un pi_hat<0.35 (pi_hat=0.2 es lo maximo que tengo)
 # (no hay incorporated) entonces el archivo imputed_tmp.vcf se convierte en el oficial (incorportated.vcf) y el merged igual 
 if [[ $(cat ${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv | wc -l) == 0 ]]
 then
@@ -602,14 +602,15 @@ then
 	mv ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz 
 else
 	# Removing samples from merged and imputed vcf
-	#de mi merged y mi imputed grande QUITAR las muestras de exlcuidas vcf (en format se quita la columna de la muestra excluida, todavia no estan calculadas las frecuencias)
- 	#basicamente llama a bcftools view -S que directamente quita las muestras de la lista y el ---min-ac=1 dice que se quede solo con las variantes que tienen un allele_count=1
-  	#luego con el sed corta el string de "dUpTaGgG" de la columna del format de los sampleIDs nuevos que se llaman asi (solo de los que eran duPP que ahora se crean siendo el sample oficial
+	#de mi merged y mi imputed grande QUITAR las muestras de exlcuidas vcf (en genotype se quita la columna de la muestra excluida, todavia no estan calculadas las frecuencias)
+ 	#basicamente llama a bcftools view -S que directamente quita las muestras del vcf y el ---min-ac=1 dice que se quede solo con las variantes que tienen un allele_count=1
+  	#luego con el sed corta el string de "dUpTaGgG" de la columna del genotype de los sampleIDs nuevos que se llaman asi (solo de los que eran duPP que ahora se crean siendo el sample oficial
 	#esto lo hace para el imputed y para el merged.vcf
  	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
 	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 
-	for i in $(cat ${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv);
+#mover de incroporated a discarded las muestras excluidas	
+ for i in $(cat ${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv);
 	do
 		mv ${path_maf}/individual_vcf/incorporated_vcf/${i}* ${path_maf}/individual_vcf/discarded_vcf_tmp/
 		mv ${path_maf}/coverage/incorporated_bed/${i}* ${path_maf}/coverage/discarded_bed_tmp/
