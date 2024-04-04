@@ -156,7 +156,8 @@ echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 #=======#
 
 #GUR: Basicamente se hace un merge de todos los VCFs, si hay demasiados VCFs entonces se hacen subsets (3 VCFs de 500 cada uno y luego otro merge de esos 3)
-
+# el merge se hace de los vcfs que hay en new_vcf y en incorporated_vcf -> los tmp_vcf de antes que estan relacionados con los duppSamples no se hace merge de ellos (
+#hay que esperar a ver cual de cada pareja (mismo sample ID) tiene más coverage
 
 echo "MERGE" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "MERGE"
@@ -164,7 +165,8 @@ STARTTIME=$(date +%s)
 
 # BCFTOOLS da error si hay muchos vcfs. Para prevenir el error he puesto como máximo 500 vcfs para hacer vcfs intermedios.
 #gur: en realidad esta haciendo listas de 850 VCFs, o sea subset_vcfs_aa, subset_vcfs_ab etc son listas de 850 VCFs, si tengo 20 pues el mismo subset son todos los VCFs iniciales
-#ademas aqui hace de new y de incorporated (no es nuestro caso)
+#ademas aqui hace de new y de incorporated (no es nuestro caso lo de incorporated porque partimos de 0
+
 ls ${path_maf}/individual_vcf/new_vcf/*.vcf.gz ${path_maf}/individual_vcf/incorporated_vcf/*.vcf.gz | split -l 850 - "${path_maf}/tmp/subset_vcfs_"
 
 function MERGED {
@@ -183,6 +185,7 @@ parallel "MERGED" ::: ${path_maf} ::: ${path_maf}/tmp/subset_vcfs_*
 #EDIT GUR: ESTA LINEA DE CODIGO ESTA JUNTANDO LOS VCFS QUE SE SEPARARON ANTES. GONZALO DECIA QUE SI HABIA MÁS DE 
 #500 VCFS HABIA QUE REPARTIRLOS EN TROZOS, O SEA: si hay 1500 vcfs en la carpeta new_vcf se HARIAN 3 MERGE: merge_aa, merge_bb, merge_cc y cada uno tendria 
 #500 VCFs y despues hay que juntar esos 3 VCFS de 500 vcfs cada uno en 1 merge (para tener los 1500)
+
 #PROBLEMA: si hay menos de 500 VCFs en el new_vcf solo hay 1 VCF: merge_aa, entonces esta linea de abajo da error porque no 
 #esta haciendo merge de varios VCFs, ya que solo hay 1. Y por eso da el error de que no puede hacer merge
 
@@ -219,7 +222,8 @@ echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 # IMPUTATION #
 #============#
 
-#GUR: coverage info used to differentiaate between a covered and non-covered position
+#GUR: coverage info used to differentiaate between a covered and non-covered position -> poner 0/0 en el genotype info de cada paciente que tiene cubierta la posicion
+#antes si no pone .../..../ mirar
 
 echo "IMPUTATION" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 STARTTIME=$(date +%s)
@@ -232,10 +236,10 @@ echo "	Making bed file" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 SUBSTARTTIME=$(date +%s)
 echo "  Making bed file"
 #GUR: se hace un bed file de todas las posiciones que hay en nuestro merged_VCF
+
 #GUR: In summary, this command extracts variant positions from a compressed VCF file, filters out header lines, formats the output to chromosome start-end positions, 
 # and saves this information in a BED file for further analysis.
 # la cosa es que se hace así chr1: 1234:1234, chr5:667:667 -> o sea en el vcf solo dan la POS entonces esto lo replica en begin y end
-
 bcftools view ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | grep -v '^#' | awk '{ print $1"\t"$2"\t"$2 }' > ${path_maf}/tmp/merged_variant_position.bed
 
 SUBENDTIME=$(date +%s)
@@ -273,7 +277,7 @@ echo "	Making coverage files" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 SUBSTARTTIME=$(date +%s)
 echo "  Making coverage files"
 
-#GUR: este codigo coge el merged_variant_position.bed (3678913 filas = # lineas/mutaciones en el VCF)
+#GUR: este codigo (funcion PL) coge el merged_variant_position.bed (3678913 filas = # lineas/mutaciones en el VCF)
 #y genera un archivo para cada muestra diciendo que posiciones estan cubiertas en ese vcf. El archivo final es un .txt por cada muestra que se guarda en /tmp/covfiles/
 #el archivo es una columna donde pone . (si la posicion en esa muestra no esta cubierta) o 10:inf (la posicion esta cubierta con 10 reads minimo que es lo que
 #viene en el bed inicial de cada muestra) y así para las 3678913 posiciones iniciales
@@ -337,8 +341,8 @@ function IMPUTE {
 	bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n ${numrows} > ${path_maf}/tmp/${iname}_imputed.vcf
 
 	#GUR: al imputeValues le pasamos: el subset_aa_merged_vcf, el subset_aa_imputed_vcf, el path de los tmp/covfiles/ y el skiprows apara
- 	#GUR: que sepa a partir de donde empezar a rellenar y el cluster sample= subset_aa
-  	#GUR: creo que no es rellenar, sino sacar el format column directamente
+ 	#GUR: que sepa a partir de donde empezar a rellenar (que se salte las lineas meta del vcf ##) y el cluster sample= subset_aa
+  	#GUR: y en cada gentoype de cada variante de cada smaple rellena 0/0... en vez de lo que pone de .../../ si la posicion esta cubierta
   	
 	#python ${task_dir}/imputeValues.py \
         python /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks/imputeValues.py \
@@ -425,7 +429,7 @@ Pasos
 	#3) Finalmente se realiza el paso del cálculo del parentesco: Tabla de relaciones con los coeficientes de relación (PI_HAT): plink --bfile merged_geno_maf_prunned --genome --min 0.05 --out relationship_raw
         # se genera el archivo relationship.tsv: #tsv con estas columnas: FID1	IID1	FID2	IID2	RT	EZ	Z0	Z1	Z2	PI_HAT	PHE	DST	PPC	RATIO
 
-# B) Tabla con los porcentajes de cobertura de las muestras: -> 1) (--missing) se crea la tabla con la información de cobertura. -> se mete la tabla en el filtro_parentesco.R
+# B) Tabla con los porcentajes de cobertura de las muestras: -> 1) (--missing) se crea la tabla con la información de cobertura (missing_stats.tsv). -> se mete la tabla en el filtro_parentesco.R
 #antes gonzalo hacia un filtro previo para quedarnos con aquellas regiones o SNPs que están en más de un 98% de las muestras (geno=0.02) pero ahora lo hace para todas las variantes
 
 #TOTAL: a filtro_parentesco.R se le pasa: 
@@ -476,11 +480,12 @@ plink --vcf imputed_${date_paste}_ID_tmp.vcf.gz --make-bed --out merged
 #smaller sample sizes of individuals carrying the less common allele. Therefore, researchers often filter out 
 #variants with very low MAFs before conducting association analyses.
 
-#CREO QUE EL MAF ES EL PARAMETRO QUE TENDRIAMOS QUE MODIFICAR PARA INCLUIR MÁS VARIANTES (defauls MAF=0.01)
+# (defauls MAF=0.01)
 #(ejemplo MAF=0.01 -> incluir las minor alleles que sean hasta un 1% de frecuentes o menos maf=0.001 (0.1%) en vez de hasta 5% como es ahora -> detectar variantes raras
 # For example, rare variant association tests may require lower MAF thresholds to detect associations, while common variant analyses may focus on variants with higher MAFs.
 
 #individuals with missing genotype rates exceeding the threshold of 100% (all missing) -> no quita a nadie porque el merged_geno_maf.fam sigue teniendo 21 vcfs (21 sample IDs o sea todos)
+#ADEMAS ES QUE NINGUN SAMPLE TIENE EL 100% DE SUS VARIANTES SIN INFO DEL GENOTIPO
 
 #ESTE ARCHIVO SON LAS VARIANTES FILTRADAS (LAS QUE SUPUESTAMENTE QUITO: APROX 124mil de las 3 millones que hay en imputed_vcf)
 plink --bfile merged --make-bed --geno ${geno} --mind 1 --maf ${maf} --out merged_geno_maf
@@ -504,19 +509,16 @@ plink --bfile merged --make-bed --geno ${geno} --mind 1 --maf ${maf} --out merge
 
 #-> lo de carol que dice que alrededor de una mutacion 
 #es tipico que haya una ventana de unos pocos SNPs que los tenga la madre tambien
+
+#AQUI HACE EL FILTRADO: #aprox 70 mil/140 mil variantes de las filtradas antes -> variantes que segregan de forma independiente (me quedo con las de r2<0.5 -> NO ESTAN EN LINKAGE DESEQUILIBRIUM)
 plink --bfile merged_geno_maf --geno ${geno} --mind 1 --maf ${maf} --indep-pairwise 50 5 0.5
 
 #extracts the subset of variants identified in the LD-based pruning step (plink.prune.in) and 
-#creates a new PLINK dataset containing only these pruned variants -> se crea .bed, .bim, .fam
+#creates a new PLINK dataset containing only these pruned variants -> se crea .bed, .bim, .fam de las 70 mil/140 mil 
 
-#aprox 70 mil/140 mil variantes de las filtradas antes -> variantes que segregan de forma independiente (me quedo con las de r2<0.5 -> NO ESTAN EN LINKAGE DESEQUILIBRIUM)
 plink --bfile merged_geno_maf --extract plink.prune.in --make-bed --out merged_geno_maf_prunned
 
-#This command is using PLINK to calculate pairwise relatedness or genetic similarity between individuals in the dataset specified by the binary file merged_geno_maf_prunned.
-#--genome indicates that you want to compute genomic relationships.
-#--min 0.05 specifies a minimum allele frequency threshold for variants to be included in the analysis.
-
-######## ESTE ES EL ULTIMO PASO DEL ANALISIS DE PARENTESCO: OBTENER EL RELATIONSHIP ENTRE LOS INDIVIDUALS EN MERGED_GENO_MAF_PRUNED
+######## AHORA VIENE EL ULTIMO PASO DEL ANALISIS DE PARENTESCO: OBTENER EL RELATIONSHIP ENTRE LOS INDIVIDUALS QUE TIENEN INFO DEL GENOTYPE EN LAS 70,167 VARIANTES DEL MERGED_GENO_MAF_PRUNED
 ### miro pi_hat= X (debe ser menor de 0.25) y se ve si las dos muestras en IID1 y IID2 estan relacionadas (tabla con 99 filas de todas las posibles parejas de sample ID)
 #por alguna razon solo se estan comparando 16 muestras (de los 21 vcfs) -> probablemente porque las 70mil variantes con las que nos hemos quedado solo tienen info del genotipo para 16/21 vcfs
 #tsv con estas columnas: FID1	IID1	FID2	IID2	RT	EZ	Z0	Z1	Z2	PI_HAT	PHE	DST	PPC	RATIO
@@ -529,13 +531,17 @@ plink --bfile merged_geno_maf --extract plink.prune.in --make-bed --out merged_g
 #cuenta el desequilibrio de ligamiento (Linkage Disequilibrium - LD) ni la frecuencia de una SNV en la población. (ya lo hemos hecho con merged_geno_maf_prunned)
 #Recomiendan usar un algoritmo basado en LD para recortar el número de SNPs antes de invocar la función "Identity-by-descent" (es la  que viene aqui abajo)
 
-#Aqui hacemos Identity by descent (IBD function de PLINK es este comando) porque obtenemos el pi_hat value entre cada par de muestras -> IBD 
+#Aqui hacemos Identity by descent (IBD function de PLINK es este comando) Y obtenemos el pi_hat value entre cada par de muestras -> archivo relationship.tsv
+#This command is using PLINK to calculate pairwise relatedness or genetic similarity (ibd) between individuals in the dataset specified by the binary file merged_geno_maf_prunned.
+#--genome indicates that you want to compute genomic relationships.
+#--min 0.05 specifies a minimum allele frequency threshold for variants to be included in the analysis.
+
 plink --bfile merged_geno_maf_prunned --genome --min 0.05 --out relationship_raw
 sed  's/^ *//' relationship_raw.genome > relationship_tmp.tsv
 sed -r 's/ +/\t/g' relationship_tmp.tsv > relationship.tsv
 rm relationship_tmp.tsv
 
-######### AQUI SE OBTIENE LA TABLA CON EL NUMERO DE REGIONES CUBIERTAS #######
+######### ESTA ES LA PARTE 2 INDEPEDNIENTE: OBTENER TABLA CON EL NUMERO DE REGIONES CUBIERTAS DE CADA MUESTRA: missing_stats.tsv #######
 
 #GUR: En primera instancia gonzalo antes de hacer la tabla de cobertura filtraba las snps que estan presentes en un 98% (mirar dibujo del drive gonzalo: page: Protocolo detección y priorización de familiares )
 #https://idcsalud-my.sharepoint.com/personal/gonzalo_nunezm_quironsalud_es/_layouts/15/Doc.aspx?sourcedoc={cbf93917-60d0-4d11-b3d9-996b67df4f8a}&action=edit&wd=target%28Base%20de%20datos%20SNVs.one%7C7dab3c87-2cb2-48ad-9814-ec2b339c3266%2FProtocolo%20detecci%C3%B3n%20y%20priorizaci%C3%B3n%20de%20familiares%7Cb6acac9b-f5a4-4635-a0f7-9160ab65cde1%2F%29&wdorigin=NavigationUrl
@@ -544,7 +550,7 @@ rm relationship_tmp.tsv
 
 #Lo que se hace ahora: directamente hacer lo de missing sobre todas las SNPS (Protocolo V2 de los aputntes del drive de gonzalo)
 
-### sacamos las estadisticas para cada uno de los VCFs: nos da un .tsv con el FID y IID (se supone que es faimly ID y sample ID pero es solo el sampleID copiado en ambas columnas (en la bd previa es lo mismo)
+### sacamos las estadisticas para cada uno de los VCFs nos da un .tsv: (missing_stats.tsv) con el FID y IID (se supone que es faimly ID y sample ID pero es solo el sampleID copiado en ambas columnas (en la bd previa es lo mismo)
 #N_MISS: Number of Missing Genotypes - This column represents the count of missing genotypes for each individual. Genotypes could be missing due to various reasons such as genotyping errors, low-quality DNA samples, or technical issues during genotyping.
 #N_GENO: Number of Genotyped Markers - This column indicates the total number of genotyped markers for each individual. It provides context for assessing the proportion of missing genotypes.
 #genotype markers: specific positions within an individual's DNA sequence that are known to exhibit variation within a population hay 3,665,949 en mi VCF (distinto del numero de mutaciones: 3,678,913
