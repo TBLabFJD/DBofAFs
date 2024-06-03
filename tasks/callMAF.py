@@ -33,13 +33,42 @@ def main(args):
     mt = mt.annotate_cols(**table[mt.s])
     mt.count()
 
+    ########################################## ORIGINAL GONZALO #######################################
     # defining pathology categories
 
-    cut_dict = {'CATEGORY': hl.agg.filter(hl.is_defined(mt.CATEGORY), hl.agg.counter(mt.CATEGORY))}
-    cut_data = mt.aggregate_cols(hl.struct(**cut_dict))
-    print(cut_dict)
-    print(cut_data)
-    print("DICCIONARIO LISTO")
+    #cut_dict = {'CATEGORY': hl.agg.filter(hl.is_defined(mt.CATEGORY), hl.agg.counter(mt.CATEGORY))}
+    #cut_data = mt.aggregate_cols(hl.struct(**cut_dict))
+    #print(cut_dict)
+    #print(cut_data)
+    #print("DICCIONARIO LISTO")
+
+    #sample_group_filters = [({}, True)]
+
+    #print(sample_group_filters)
+    #print("SAMPLE GROUP FILTERS")
+
+    #sample_group_filters.extend([
+            #({'DS': CATEGORY}, mt.CATEGORY == CATEGORY) for CATEGORY in cut_data.CATEGORY
+        #] +  [
+            #({'P': CATEGORY}, mt.CATEGORY != CATEGORY) for CATEGORY in cut_data.CATEGORY
+        #])
+    ########################################## FIN ORIGINAL GONZALO #######################################
+
+    
+    ########################################## GUR 3/06/2024: 2 CATEGORIA Y SUBCATEGORIA #######################################
+    # defining pathology categories
+
+    cut_dict_CAT = {'CATEGORY': hl.agg.filter(hl.is_defined(mt.CATEGORY), hl.agg.counter(mt.CATEGORY))}
+    cut_data_CAT = mt.aggregate_cols(hl.struct(**cut_dict_CAT))
+    print(cut_dict_CAT)
+    print(cut_data_CAT)
+    print("DICCIONARIO LISTO CATEGORY")
+
+    cut_dict_CAT = {'SUBCATEGORY': hl.agg.filter(hl.is_defined(mt.SUBCATEGORY), hl.agg.counter(mt.SUBCATEGORY))}
+    cut_data_CAT = mt.aggregate_cols(hl.struct(**cut_dict_SUBCAT))
+    print(cut_dict_SUBCAT)
+    print(cut_data_SUBCAT)
+    print("DICCIONARIO LISTO SUBCATEGORY")
 
     sample_group_filters = [({}, True)]
 
@@ -47,11 +76,17 @@ def main(args):
     print("SAMPLE GROUP FILTERS")
 
     sample_group_filters.extend([
-            ({'DS': CATEGORY}, mt.CATEGORY == CATEGORY) for CATEGORY in cut_data.CATEGORY
+            ({'DS': CATEGORY}, mt.CATEGORY == CATEGORY) for CATEGORY in cut_data_CAT.CATEGORY
         ] +  [
-            ({'P': CATEGORY}, mt.CATEGORY != CATEGORY) for CATEGORY in cut_data.CATEGORY
+            ({'P': CATEGORY}, mt.CATEGORY != CATEGORY) for CATEGORY in cut_data_CAT.CATEGORY
+        ] +  [
+            ({'DS': SUBCATEGORY}, mt.SUBCATEGORY == SUBCATEGORY) for SUBCATEGORY in cut_data_SUBCAT.SUBCATEGORY
         ])
+    ########################################## FIN ORIGINAL GONZALO #######################################
 
+
+
+    
     print("SAMPLE GROUP FILTERS 2")
 
     for i in range(len(sample_group_filters)):
