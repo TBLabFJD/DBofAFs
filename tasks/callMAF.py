@@ -19,7 +19,6 @@ def main(args):
     ############ GUR ADDED ON 3/06/2024: redirigir el tmp que general hail porque ahora va al /tmp de la UAM que esta petado
     hl.init(
           tmp_dir=tmpdir,
-          local_tmpdir=tmpdir,
           spark_conf={"spark.local.dir": tmpdir}
         )
     
