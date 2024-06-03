@@ -64,8 +64,8 @@ def main(args):
     print(cut_data_CAT)
     print("DICCIONARIO LISTO CATEGORY")
 
-    cut_dict_CAT = {'SUBCATEGORY': hl.agg.filter(hl.is_defined(mt.SUBCATEGORY), hl.agg.counter(mt.SUBCATEGORY))}
-    cut_data_CAT = mt.aggregate_cols(hl.struct(**cut_dict_SUBCAT))
+    cut_dict_SUBCAT = {'SUBCATEGORY': hl.agg.filter(hl.is_defined(mt.SUBCATEGORY), hl.agg.counter(mt.SUBCATEGORY))}
+    cut_data_SUBCAT = mt.aggregate_cols(hl.struct(**cut_dict_SUBCAT))
     print(cut_dict_SUBCAT)
     print(cut_data_SUBCAT)
     print("DICCIONARIO LISTO SUBCATEGORY")
