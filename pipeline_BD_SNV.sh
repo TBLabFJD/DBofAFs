@@ -14,9 +14,11 @@ module load bcftools
 #path antiguo gonzalo
 #export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.322.b06-1.el7_9.x86_64/jre/bin/:$PATH
 
-#path graciela
-export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.402.b06-2.el8.x86_64/jre/bin/:$PATH
+#path graciela: este era el path antiguo a java 8 que habia en marzo de 2024
+#export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.402.b06-2.el8.x86_64/jre/bin/:$PATH
 
+#path graciela java 8: nuevo path -> actualizado el 20 abril 2024
+export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.412.b08-2.el8.x86_64/jre/bin:$PATH
 
 
 ##### GUR: hay que rellenar los paths de donde tenemos las cosas
