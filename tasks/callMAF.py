@@ -4,6 +4,7 @@
 import hail as hl
 import time
 import argparse
+import os
 
 def main(args):
 
@@ -13,6 +14,15 @@ def main(args):
     metadata = args.pathology
     mafdb_file = args.mafdb
     sample_group_file = args.samplegroup 
+    # Read the TMPDIR environment variable
+    tmpdir = os.environ.get('TMPDIR')
+    ############ GUR ADDED ON 3/06/2024: redirigir el tmp que general hail porque ahora va al /tmp de la UAM que esta petado
+    hl.init(
+          tmp_dir=tmpdir,
+          local_tmpdir=tmpdir,
+          spark_conf={"spark.local.dir": tmpdir}
+        )
+    
 
     #### GUR CHANGE REFERENCE GENOME LINE 22 -> BEFORE: reference_genome='GRCh37'and after reference_genome='GRCh38'
 
