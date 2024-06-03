@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding: utf-8
 
 import hail as hl
@@ -17,10 +17,7 @@ def main(args):
     # Read the TMPDIR environment variable
     tmpdir = os.environ.get('TMPDIR')
     ############ GUR ADDED ON 3/06/2024: redirigir el tmp que general hail porque ahora va al /tmp de la UAM que esta petado
-    hl.init(
-          tmp_dir=tmpdir,
-          spark_conf={"spark.local.dir": tmpdir}
-        )
+    hl.init(tmp_dir=tmpdir,spark_conf={"spark.local.dir": tmpdir})
     
 
     #### GUR CHANGE REFERENCE GENOME LINE 22 -> BEFORE: reference_genome='GRCh37'and after reference_genome='GRCh38'
