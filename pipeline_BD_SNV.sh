@@ -492,7 +492,7 @@ mkdir "${path_maf}/db/${date_dir}"
 cd ${path_maf}/db/${date_dir}/
 
 
-python ${task_dir}/callMAF.py \
+python3 ${task_dir}/callMAF.py \
 --multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
 --pathology ${mymetadatapathology_uniq} \
 --mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
