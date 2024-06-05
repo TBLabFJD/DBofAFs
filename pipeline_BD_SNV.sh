@@ -8,7 +8,7 @@ module load plink
 module load R/R
 source ~/.Renviron
 #no se encontraba el libcrypto.so.1.0.0 que necesitaba el bcftools, asi que con esta linea le digo que busque en /lib64
-#export LD_LIBRARY_PATH=/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/lib64:$LD_LIBRARY_PATH
 module load bcftools
 
 #path antiguo gonzalo
