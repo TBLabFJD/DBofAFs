@@ -18,7 +18,7 @@ def main(args):
     mafdb_file = args.mafdb
     sample_group_file = args.samplegroup 
     my_tmpdir=args.tmpdir
-    
+    print(hl.version())
     ############ GUR ADDED ON 3/06/2024: redirigir el tmp que general hail porque ahora va al /tmp de la UAM que esta petado
     # Initialize Hail with the provided Spark configuration
     hl.init(tmp_dir=my_tmpdir, spark_conf={"spark.local.dir": my_tmpdir})
