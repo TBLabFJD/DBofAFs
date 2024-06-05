@@ -50,7 +50,7 @@ date_dir="date_${date_paste}"
 mkdir "${path_maf}/metadata/${date_dir}"
 mkdir "${path_maf}/tmp"
 mkdir "${path_maf}/tmp/covFiles/"
-
+mkdir "${path_maf}/tmp/hail/"
 
 echo "INICIO:" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo $(date) >> ${path_maf}/metadata/${date_dir}/logfile.txt
@@ -492,12 +492,18 @@ mkdir "${path_maf}/db/${date_dir}"
 cd ${path_maf}/db/${date_dir}/
 
 
-python3 ${task_dir}/callMAF.py \
+#python3 ${task_dir}/callMAF.py \
+#--multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
+#--pathology ${mymetadatapathology_uniq} \
+#--mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
+#--samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
+
+python3 ${task_dir}/sub_callMAF.py \
 --multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
 --pathology ${mymetadatapathology_uniq} \
 --mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
+--tmpdir ${path_maf}/tmp/hail \
 --samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
-
 
 python ${task_dir}/changeFormat.py \
 --multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
