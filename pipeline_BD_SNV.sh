@@ -11,6 +11,11 @@ source ~/.Renviron
 #export LD_LIBRARY_PATH=/lib64:$LD_LIBRARY_PATH
 module load bcftools
 
+#NECESITO LA VERSION 0.2.120 de hail, hasta que en la uam no la actualicen la que hay en /lustre/local/miniconda/python-3.6/lib/python3.6/site-packages/hail-0.2.30.dist-info
+#cargo mi environment que tiene hail 0.2.120
+source /home/graciela/anaconda3/bin/activate hail
+
+
 #path antiguo gonzalo
 #export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.322.b06-1.el7_9.x86_64/jre/bin/:$PATH
 
