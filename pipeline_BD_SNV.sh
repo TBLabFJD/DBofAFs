@@ -508,7 +508,7 @@ python3 ${task_dir}/sub_callMAF.py \
 --mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
 --tmpdir ${path_maf}/tmp/hail \
 --samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
-/home/graciela/anaconda3/bin/conda deactivate
+
 
 python ${task_dir}/changeFormat.py \
 --multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
