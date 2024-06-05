@@ -500,7 +500,7 @@ cd ${path_maf}/db/${date_dir}/
 
 #NECESITO LA VERSION 0.2.120 de hail, hasta que en la uam no la actualicen la que hay en /lustre/local/miniconda/python-3.6/lib/python3.6/site-packages/hail-0.2.30.dist-info
 #cargo mi environment que tiene hail 0.2.120
-#source /home/graciela/anaconda3/bin/activate hail
+source /home/graciela/anaconda3/bin/activate hail
 
 python3 ${task_dir}/sub_callMAF.py \
 --multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
@@ -508,6 +508,8 @@ python3 ${task_dir}/sub_callMAF.py \
 --mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
 --tmpdir ${path_maf}/tmp/hail \
 --samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
+
+source /home/graciela/anaconda3/bin/deactivate
 
 
 python ${task_dir}/changeFormat.py \
