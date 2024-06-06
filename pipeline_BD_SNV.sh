@@ -72,36 +72,111 @@ echo "FIRST FAMILY FILTER" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 STARTTIME=$(date +%s)
 echo "FIRST FAMILY FILTER"
 
-for vcf in ${path_maf}/individual_vcf/incorporated_vcf/*.vcf.gz; do bcftools query -l ${vcf} >> ${path_maf}/metadata/${date_dir}/multisample.tsv ; done
-for vcf in ${path_maf}/individual_vcf/new_vcf/*.vcf.gz; do bcftools query -l ${vcf} >> ${path_maf}/metadata/${date_dir}/indivsample.tsv ; done
-# ls ${path_maf}/individual_vcf/new_vcf/*.vcf.gz | xargs -n 1 basename | sed 's/_.*$//' | sed 's/\..*$//' | sed 's/b$//' | sed 's/bis$//'> ${path_maf}/metadata/${date_dir}/indivsample.tsv
+###################################### ORIGINAL GONZALO ####################################################
+#list sample names, con bcftools o que hace es extraer el samplename up to first point (lo extrae de DENTRO del VCF, o sea si yo renombre el archivo se guarda con el nombre original del vcf)
+#por ejemplo: si una muestra de impact la renombre al sample id y utilizo este comando entonces me va a poner en la lista el nombre en base al id de impact, no al nuevo -> no usar esta función
+#original gonzalo
+#for vcf in ${path_maf}/individual_vcf/incorporated_vcf/*.vcf.gz; do bcftools query -l ${vcf} >> ${path_maf}/metadata/${date_dir}/multisample.tsv ; done
+#for vcf in ${path_maf}/individual_vcf/new_vcf/*.vcf.gz; do bcftools query -l ${vcf} >> ${path_maf}/metadata/${date_dir}/indivsample.tsv ; done
+#for vcf in *.vcf.gz; do bcftools query -l ${vcf} >> indivsample.tsv ; done
 
-# Exit pipeline if there are duplicate samples in the within the batch of samples that are going to be analyced
-if [[ $(sort "${path_maf}/metadata/${date_dir}/indivsample.tsv" | uniq -d | wc -l) > 0 ]]
-then
-	echo "Duplicate samples in batch:"
-	sort ${path_maf}/metadata/${date_dir}/indivsample.tsv | uniq -d
-	echo "Please, manualy filter these duplicated samples."
-	echo "Exit"
-	exit 1
-fi
+# Exit pipeline if there are duplicate samples in the within the batch of samples that are going to be newly added 
+#GUR: si en la lista de los nuevos samples que va a anadir estan los IDs repetidos de las muestras te dice que filtres manualmente y los quites de la carpeta new
+#if [[ $(sort "${path_maf}/metadata/${date_dir}/indivsample.tsv" | uniq -d | wc -l) > 0 ]]
+#then
+	#echo "Duplicate samples in batch:"
+	#sort ${path_maf}/metadata/${date_dir}/indivsample.tsv | uniq -d
+	#echo "Please, manualy filter these duplicated samples."
+	#echo "Exit"
+	#exit 1
+#fi
 
+# ESTE CODIGO LO QUE HACE ES: meter el indivsample.tsv (lista de samples IDS NUEVOS que voy a añadir) y lista de los ya incorporados (multisample.tsv) en mi caso
+#no porque creo la base de datos de 0
+# lo que hace es generar un archivo: avoid_samples.tsv que te indica los sample IDs NUEVOS que son de la misma familia de alguien que habia previamente en la base de datos
+#y luego te crea dup_samples.tsv que es una lista de sample IDs que estas intentando meter que ya estaban previamente en la base de datos (en incorporated)
+# EN MI CASO ESTO NO SIRVE PARA NADA PORQUE NO HABIA NADIE INCORPORADO PREVIAMENTE (todo new) -> en una futura actualizacion habra que ver para meter este codigo como "actualziacion base de datos"
+#python ${task_dir}/avoid_family.py \
+#--multivcf ${path_maf}/metadata/${date_dir}/multisample.tsv \
+#--singlevcf ${path_maf}/metadata/${date_dir}/indivsample.tsv \
+#--family ${mymetadatapathology_uniq} \
+#--output ${path_maf}/metadata/${date_dir}/avoid_samples.tsv \
+#--dupout ${path_maf}/metadata/${date_dir}/dup_samples.tsv
 
-python ${task_dir}/avoid_family.py \
---multivcf ${path_maf}/metadata/${date_dir}/multisample.tsv \
---singlevcf ${path_maf}/metadata/${date_dir}/indivsample.tsv \
---family ${mymetadatapathology_uniq} \
---output ${path_maf}/metadata/${date_dir}/avoid_samples.tsv \
---dupout ${path_maf}/metadata/${date_dir}/dup_samples.tsv
-
+# los avoid_samples.tsv (esos sample IDs nuevos que son de la misma familia de alguien que habia previamente en la bd) lleva su vcf y su bed a discarded 
+# NO ME PASA A MI EN NINGUN MOMENTO PORQUE CREO LA BASE DE DATOS DE 0
 
 # Moving individual vcf and bed files from related samples to the discarded folders
-for i in $(cat ${path_maf}/metadata/${date_dir}/avoid_samples.tsv);
-do
-	mv ${path_maf}/individual_vcf/new_vcf/${i}* ${path_maf}/individual_vcf/discarded_vcf/
-	mv ${path_maf}/coverage/new_bed/${i}* ${path_maf}/coverage/discarded_bed/
+#for i in $(cat ${path_maf}/metadata/${date_dir}/avoid_samples.tsv);
+#do
+	#mv ${path_maf}/individual_vcf/new_vcf/${i}* ${path_maf}/individual_vcf/discarded_vcf/
+	#mv ${path_maf}/coverage/new_bed/${i}* ${path_maf}/coverage/discarded_bed/
+#done
+###################################### fin ORIGINAL GONZALO ####################################################
+
+
+# Iterate over all vcf.gz files in the specified directory
+for vcf in ${path_maf}/individual_vcf/new_vcf/*.vcf.gz; do
+        file_name=$(basename "$vcf" | cut -d '.' -f1)
+        echo "$file_name" >> ${path_maf}/metadata/${date_dir}/indivsample.tsv
 done
 
+### esto no me pasa porque creo la base de datos de 0 -> para el futuro actualizar base de datos
+#for vcf in ${path_maf}/individual_vcf/incorporated_vcf/*.vcf.gz; do
+        #file_name=$(basename "$vcf" | cut -d '.' -f1)
+        #echo "$file_name" >> ${path_maf}/metadata/${date_dir}/multisample.tsv
+#done
+
+###### mirar cuantos CES, WES y WGS hay de cada ADN-> priorizar CES over WES y WES over WGS -> mandar a discarded las que no se usan y quedarnos con todas las files del mismo tipo priorizado: si 2 CES me quedo 2 CES, si 2 CES y 1 WGS me quedo 1 WGS etc
+duplicates=$(sort "${path_maf}/metadata/${date_dir}/indivsample.tsv" | uniq -d)
+if [[ $(echo "$duplicates" | wc -l) -gt 0 ]]; then
+    echo "Duplicate samples in batch:"
+    echo "$duplicates"
+
+    while IFS= read -r sample; do
+        files=($(find . -type f -name "${sample}*.vcf.gz"))
+
+        wgs_files=()
+        wes_files=()
+        ces_files=()
+
+        for file in "${files[@]}"; do
+            case "$file" in
+                *WGS*) wgs_files+=("$file") ;;
+                *WES*) wes_files+=("$file") ;;
+                *CES*) ces_files+=("$file") ;;
+            esac
+        done
+
+        # Function to move file pairs to discarded directory
+        move_to_discarded() {
+            local files_to_move=("$@")
+            for f in "${files_to_move[@]}"; do
+                mv "$f" discarded/
+                mv "${f}.tbi" discarded/
+            done
+        }
+
+        # Prioritize file types
+        if [[ ${#wgs_files[@]} -ge 1 ]]; then
+            move_to_discarded "${wes_files[@]}" "${ces_files[@]}"
+            echo "$sample: keeping all WGS"
+        elif [[ ${#wes_files[@]} -ge 1 ]]; then
+            move_to_discarded "${ces_files[@]}"
+            echo "$sample: keeping all WES"
+        elif [[ ${#ces_files[@]} -ge 1 ]]; then
+            echo "$sample: keeping all CES"
+        else
+            echo "$sample: keeping all samples"
+        fi
+
+    done <<< "$duplicates"
+
+    exit 1
+fi
+############### fin quedarnos con las muestras de un mismo tipo y tantas como se hayan secuenciado ###############
+
+################## AHORA CREAR UN ARCHIVO REAL DE LAS DUP_SAMPLES -> del tipo de muestra que se ha quedado (CES, WGS o WES) crear un archivo de las dup samples y que se les ponga ya la coletilla y tal
 
 
 # Rename duplicate samples
