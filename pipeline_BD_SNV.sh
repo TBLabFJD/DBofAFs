@@ -72,6 +72,7 @@ echo "FIRST FAMILY FILTER"
 #GUR: crea dos listas de los VCFs que ya estan incorporados en una bd previa (multisample.tsv) y una lista de los nuevos (indiv .sample) en este
 # caso no hay multisample.vcf porque la base de datos se crea de 0 sin que haya incorporated
 for vcf in ${path_maf}/individual_vcf/incorporated_vcf/*.vcf.gz; do bcftools query -l ${vcf} >> ${path_maf}/metadata/${date_dir}/multisample.tsv ; done
+##esta linea extrae la lista de sample_IDs up to first point: o sea si hay 21-4671.hg38.gatk.WES.v41.20240313.vcf.gz y 21-4671.hg38.gatk.WGS.v41.20240313.vcf.gz en la lista va a extraer 2 veces 21-4671
 for vcf in ${path_maf}/individual_vcf/new_vcf/*.vcf.gz; do bcftools query -l ${vcf} >> ${path_maf}/metadata/${date_dir}/indivsample.tsv ; done
 # ls ${path_maf}/individual_vcf/new_vcf/*.vcf.gz | xargs -n 1 basename | sed 's/_.*$//' | sed 's/\..*$//' | sed 's/b$//' | sed 's/bis$//'> ${path_maf}/metadata/${date_dir}/indivsample.tsv
 
