@@ -174,66 +174,39 @@ if [[ $(echo "$duplicates" | wc -l) -gt 0 ]]; then
 
     exit 1
 fi
+
+################################### SE ME HA OLVIDADO QUE TAMBIEN TENGO QUE MOVER LOS BEDS A DISCARDED A LA VEZ JEJE
+
 ############### fin quedarnos con las muestras de un mismo tipo y tantas como se hayan secuenciado ###############
 
-
-###otra vez extraer sample IDS de los que se han quedado despues de quitar CES y tal
+###otra vez extraer lista de los sample IDS de los que se han quedado despues de quitar CES y tal
 # Iterate over all vcf.gz files in the specified directory
 for vcf in ${path_maf}/individual_vcf/new_vcf/*.vcf.gz; do
         file_name=$(basename "$vcf" | cut -d '.' -f1)
         echo "$file_name" >> ${path_maf}/metadata/${date_dir}/indivsample.tsv
 done
 
-
 #lista de IDs unicos de muestras duplicadas
 sort "${path_maf}/metadata/${date_dir}/indivsample.tsv" | uniq -d > ${path_maf}/metadata/${date_dir}/dup_samples.tsv
 
-
-###### ahora se quedan los duplicate samples renombrados tal que así: dUpTaGgG1_19-0986.hg38.gatk.CES.v41.20240315.vcf.gz dUpTaGgG2_19-0986.hg38.gatk.CES.v41.20240315.vcf.gz y así estan controlados
+########### AHORA DE LAS QUE QUEDAN AÑADIRLES LA COLETILLA DE DUP1 DUP2 ETC: NOW PROCESS BOTH THE BED AND THE VCF+TBI
 dup_file="${path_maf}/metadata/${date_dir}/dup_samples.tsv"
-# RENOMBRAR LOS VCFS CON SUS COLETILLAS Y HABRIA QUE 
-while IFS= read -r sample; do
-    # Find all files with the matching first 7 characters
-    files=($(find "${path_maf}/individual_vcf/new_vcf" -type f -name "${sample}*.vcf.gz"))
 
-    # Initialize counter for unique identifier
-    i=1
+# Function to rename files
+rename_files() {
+    local sample=$1
+    local i=$2
 
-    # Rename each duplicate file
-    for file in "${files[@]}"; do
-        # Extract the original filename
-        original_filename=$(basename "$file")
-
-        # Construct the new filename
-        new_filename="dUpTaGgG${i}${original_filename}"
-
-        # Rename the file
-        mv "$file" "${path_maf}/individual_vcf/new_vcf/${new_filename}"
-
-        # Also rename the corresponding .tbi file
-        mv "${file}.tbi" "${path_maf}/individual_vcf/new_vcf/${new_filename}.tbi"
-
-        # Increment the counter
-        ((i++))
-    done
-done < "$dup_file"
-############## hasta aqui funciona pero quiero hacer un script comun que cambie los file names tanto de los vcfs como de los beds:
-
-dup_file="${path_maf}/metadata/${date_dir}/dup_samples.tsv"
-########### NOW PROCESS BOTH THE BED AND THE VCF+TBI
-# Process each duplicate sample
-while IFS= read -r sample; do
     # Find all VCF files with the matching first 7 characters
     vcf_files=($(find "${path_maf}/individual_vcf/new_vcf" -type f -name "${sample}*.vcf.gz"))
 
-    # Initialize counter for unique identifier
-    i=1
-
-    # Rename each duplicate VCF file
     for vcf_file in "${vcf_files[@]}"; do
         # Extract the original filename without the extension
         original_vcf_filename=$(basename "$vcf_file")
         original_vcf_base="${original_vcf_filename%.vcf.gz}"
+
+        # Extract the date part from the VCF filename
+        date_part=$(echo "$original_vcf_filename" | grep -oE '[0-9]{8}')
 
         # Construct the new VCF filename
         new_vcf_filename="dUpTaGgG${i}${original_vcf_filename}"
@@ -246,7 +219,7 @@ while IFS= read -r sample; do
 
         # Match and rename the corresponding BED file
         # Find the BED file matching the sample name and date
-        bed_file=$(find "${path_maf}/coverage/new_bed" -type f -name "${sample}*${original_vcf_base##*.vcf.gz}*.bed")
+        bed_file=$(find "${path_maf}/coverage/new_bed" -type f -name "${sample}*${date_part}*.bed")
 
         if [[ -n "$bed_file" ]]; then
             original_bed_filename=$(basename "$bed_file")
@@ -257,12 +230,17 @@ while IFS= read -r sample; do
         # Increment the counter
         ((i++))
     done
+}
+
+# Process each duplicate sample
+while IFS= read -r sample; do
+    rename_files "$sample" 1
 done < "$dup_file"
 
+###### ahora YA SE HAN QUEDADO  los duplicate samples renombrados tal que así: dUpTaGgG119-0986.hg38.gatk.CES.v41.20240315.vcf.gz dUpTaGgG219-0986.hg38.gatk.CES.v41.20240315.vcf.gz y así estan controlados y tambien sus correspondientes BEDs
 
 
 
-################## AHORA CREAR UN ARCHIVO REAL DE LAS DUP_SAMPLES -> del tipo de muestra que se ha quedado (CES, WGS o WES) crear un archivo de las dup samples y que se les ponga ya la coletilla y tal
 ################### ESTE CODIGO ES SOLO PARA CUANDO YA HABIA INCORPORATED VCFS
 
 # Rename duplicate samples (las de incorporated se quedan igual y las del new se renombran con la coletilla) este codigo solo vale para una vez ya se habia creado la base de datos
@@ -289,48 +267,12 @@ done < "$dup_file"
 #done
 
 ######################################################################################################################################################
-for i in $(cat dup_samples.tsv);
-do
-	vcffile="$(ls ${i}*gz)"
-	tbifile="$(ls ${i}*tbi)"
-	bcftools view ${vcffile} | sed "s/${i}/dUpTaGgG${i}/g" | bgzip -c > dUpTaGgG${vcffile}
-	tabix -p vcf dUpTaGgG${vcffile}
-done
-
-
-
-
-mkdir ${path_maf}/individual_vcf/tmp_vcf/# NO LO USO
-cd ${path_maf}/individual_vcf/new_vcf/
-for i in $(cat ${path_maf}/metadata/${date_dir}/dup_samples.tsv);
-do
-	vcffile="$(ls ${i}*gz)"
-	tbifile="$(ls ${i}*tbi)"
-
-	mv ${vcffile} ${tbifile} ../tmp_vcf/ # NO LAS MUEVO A TMP
-
-	bcftools view ../tmp_vcf/${vcffile} | sed "s/${i}/dUpTaGgG${i}/g" | bgzip -c > dUpTaGgG${vcffile}
-	tabix -p vcf dUpTaGgG${vcffile}
-
-done
-
-cd ${path_maf}/coverage/new_bed/
-for i in $(cat ${path_maf}/metadata/${date_dir}/dup_samples.tsv);
-do
-	bedfile="$(ls ${i}*bed)"
-	mv ${bedfile} dUpTaGgG${bedfile}
-done
 
 
 ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
-
-
-
-
-
 
 #=======#
 # Merge #
