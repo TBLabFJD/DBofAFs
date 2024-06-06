@@ -68,7 +68,7 @@ def main(args):
     f.write(clusterSample + ": Diccionario: " + "\n")
     f.write(str(diccionario) + "\n")
     
-    f.write(clusterSample + ": Pre-imputación: " + "\n")
+    f.write(clusterSample + ": Pre-imputacion: " + "\n")
     f.write(str(datetime.now()) + "\n")
     
     for i in cols[9:]:

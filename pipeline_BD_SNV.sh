@@ -1,28 +1,38 @@
 #!/bin/bash
 
 
-
 module load bedtools
 module load miniconda/3.6
-module load bcftools
 module load gcc
 module load plink
 module load R/R
 source ~/.Renviron
-export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.322.b06-1.el7_9.x86_64/jre/bin/:$PATH
+#no se encontraba el libcrypto.so.1.0.0 que necesitaba el bcftools, asi que con esta linea le digo que busque en /lib64
+export LD_LIBRARY_PATH=/lib64:$LD_LIBRARY_PATH
+module load bcftools
+
+#path antiguo gonzalo
+#export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.322.b06-1.el7_9.x86_64/jre/bin/:$PATH
+
+#path graciela: este era el path antiguo a java 8 que habia en marzo de 2024
+#export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.402.b06-2.el8.x86_64/jre/bin/:$PATH
+
+#path graciela java 8: nuevo path -> actualizado el 20 abril 2024
+export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.412.b08-2.el8.x86_64/jre/bin:$PATH
 
 
-
-
+##### GUR: hay que rellenar los paths de donde tenemos las cosas
+## el data base path es TODA la carpeta donde esta db, vcfs, metadata...
 
 # Data base path
-path_maf=""
+path_maf="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs"
 
 # TSV file with sample-pathology information
-mymetadatapathology_uniq=""
-
+#mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/pru_metadata.tsv" # el normal
+#mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/doble_metadata.tsv" #1 cat y 1 subcat
+mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/cat_sub_cat.tsv" #varias cat y varias subcat
 # Task directory
-task_dir=""
+task_dir="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks"
 
 
 
@@ -40,12 +50,13 @@ date_dir="date_${date_paste}"
 mkdir "${path_maf}/metadata/${date_dir}"
 mkdir "${path_maf}/tmp"
 mkdir "${path_maf}/tmp/covFiles/"
-
+mkdir "${path_maf}/tmp/hail/"
 
 echo "INICIO:" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo $(date) >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
-
+echo "INICIO:"
+echo $(date)
 
 
 
@@ -59,6 +70,7 @@ echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 
 echo "FIRST FAMILY FILTER" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 STARTTIME=$(date +%s)
+echo "FIRST FAMILY FILTER"
 
 for vcf in ${path_maf}/individual_vcf/incorporated_vcf/*.vcf.gz; do bcftools query -l ${vcf} >> ${path_maf}/metadata/${date_dir}/multisample.tsv ; done
 for vcf in ${path_maf}/individual_vcf/new_vcf/*.vcf.gz; do bcftools query -l ${vcf} >> ${path_maf}/metadata/${date_dir}/indivsample.tsv ; done
@@ -118,6 +130,7 @@ done
 
 ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
+echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 
 
@@ -130,6 +143,7 @@ echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 #=======#
 
 echo "MERGE" >> ${path_maf}/metadata/${date_dir}/logfile.txt
+echo "MERGE"
 STARTTIME=$(date +%s)
 
 # BCFTOOLS da error si hay muchos vcfs. Para prevenir el error he puesto como máximo 500 vcfs para hacer vcfs intermedios.
@@ -146,23 +160,42 @@ function MERGED {
 } 
 
 export -f MERGED
-
 parallel "MERGED" ::: ${path_maf} ::: ${path_maf}/tmp/subset_vcfs_*
 
-bcftools merge -O z -o ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/merge.*.vcf.gz
+#EDIT GUR: ESTA LINEA DE CODIGO ESTA JUNTANDO LOS VCFS QUE SE SEPARARON ANTES. GONZALO DECIA QUE SI HABIA MÁS DE 
+#500 VCFS HABIA QUE REPARTIRLOS EN TROZOS, O SEA: si hay 1500 vcfs en la carpeta new_vcf se HARIAN 3 MERGE: merge_aa, merge_bb, merge_cc y cada uno tendria 
+#500 VCFs y despues hay que juntar esos 3 VCFS de 500 vcfs cada uno en 1 merge (para tener los 1500)
+#PROBLEMA: si hay menos de 500 VCFs en el new_vcf solo hay 1 VCF: merge_aa, entonces esta linea de abajo da error porque no 
+#esta haciendo merge de varios VCFs, ya que solo hay 1. Y por eso da el error de que no puede hacer merge
+
+#linea original GONZALO
+#bcftools merge -O z -o ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/merge.*.vcf.gz
+
+#GUR EDIT: cp el merge original (merge_aa) en uno nuevo que se llame como lo del date_paste
+#cp ${path_maf}/tmp/merge.*.vcf.gz ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz
 
 
+# Count the number of VCFs (merge_aa, merge_bb...)
+file_count=$(ls -1 "${path_maf}/tmp/merge."*.vcf.gz 2>/dev/null | wc -l)
+if [ "$file_count" -gt 1 ]; then
+    # HAY MÁS DE 1 VCF PARA MERGE: merge_aa, merge_bb.. ORIGINALMENTE: >500 VCF rn la carpeta
+	echo LINEA GONZALO 
+	bcftools merge -O z -o ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/merge.*.vcf.gz
+
+else
+    # solo hay 1 VCF (MERGE_AA), no hay que merge nada: originalmente <500 VCF en new_vcf
+	echo LINEA GRACIELA
+	cp ${path_maf}/tmp/merge.*.vcf.gz ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz
+fi
+
+#comment gonzalo
 #######if [[ $(ls ${path_maf}/individual_vcf/new_vcf/*.vcf.gz | wc -l) -gt 850 ]]
 
 
 ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
-
-
-
-
-
+echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 
 #============#
 # IMPUTATION #
@@ -170,24 +203,27 @@ echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 
 echo "IMPUTATION" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 STARTTIME=$(date +%s)
+echo "IMPUTATION"
 
 
 
 # Making a bedfile from the merged vcf so that bedtools will work faster (40 min per sample to 2 sec per sample)
 echo "	Making bed file" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 SUBSTARTTIME=$(date +%s)
+echo "  Making bed file"
 
 bcftools view ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | grep -v '^#' | awk '{ print $1"\t"$2"\t"$2 }' > ${path_maf}/tmp/merged_variant_position.bed
 
 SUBENDTIME=$(date +%s)
 echo "	Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
-
+echo "  Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds" 
 
 
 # Make sure there are no overlaping regions so that coverage files have the same number of entries as variants in the merge vcf
 echo "	Remove overlapping regions in new bed files" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 SUBSTARTTIME=$(date +%s)
+echo "  Remove overlapping regions in new bed files"
 
 for file in ${path_maf}/coverage/new_bed/*.bed; 
 do 
@@ -198,12 +234,14 @@ done
 SUBENDTIME=$(date +%s)
 echo "	Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
+echo "  Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds"
 
 
 
 # Making coverage files
 echo "	Making coverage files" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 SUBSTARTTIME=$(date +%s)
+echo "  Making coverage files"
 
 # for file in $(ls ${path_maf}/coverage/new_bed/*.bed ${path_maf}/coverage/incorporated_bed/*.bed);
 # do 
@@ -224,12 +262,13 @@ parallel "PL" ::: ${path_maf} ::: ${path_maf}/coverage/new_bed/*.bed ${path_maf}
 SUBENDTIME=$(date +%s)
 echo "	Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
+echo "  Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds"
 
 
 # Runinng imputeValues.py script
 echo "	Runinng imputeValues.py script" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 SUBSTARTTIME=$(date +%s)
-
+echo "  Runinng imputeValues.py script"
 
 bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp/subset_vcfs_merge_"
 
@@ -249,7 +288,8 @@ function IMPUTE {
 	numrows="$((${skiprows}-1))"
 	bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n ${numrows} > ${path_maf}/tmp/${iname}_imputed.vcf
 
-	python ${task_dir}/imputeValues.py \
+	#python ${task_dir}/imputeValues.py \
+        python /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks/imputeValues.py \
 	--mergedvcf ${path_maf}/tmp/${iname}_merged.vcf.gz \
 	--skiprows ${skiprows} \
 	--imputedvcf ${path_maf}/tmp/${iname}_imputed.vcf \
@@ -270,18 +310,49 @@ function IMPUTE {
 
 export -f IMPUTE
 
+echo BEFORE PARALLEL INPUT 
 parallel "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
+echo AFTER PARRALEL INPUT
 
-# Merge impute values
-bcftools merge -O z -o ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/subset_vcfs_merge_*_imputed.vcf.gz	
+### GUR: commenta eveything de aqui para abajo. pARA COMENTAR QUITAR ALMOHADILLA
+
+#: '
+
+
+
+###GUR: PASA LO MISMO QUE ANTES, QUE HAY QUE CONTEMPLAR LA IDEA DE TENER MENOS DE 500 VCFs y que solo hay un subset_vcf_aa, o sea no hay varios entonces
+##no se puede hacer bcftools merge:
+
+###ORIGINAL GONZALO
+## Merge impute values
+# bcftools merge -O z -o ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/subset_vcfs_merge_*_imputed.vcf.gz	
+###### FIN GONZALO
+
+##GRACI:
+# Count the number of VCFs (merge_aa, merge_bb...)
+file_count=$(ls -1 "${path_maf}/tmp/subset_vcfs_merge_"*_imputed.vcf.gz 2>/dev/null | wc -l)
+if [ "$file_count" -gt 1 ]; then
+    # HAY MÁS DE 1 VCF PARA MERGE: merge_aa, merge_bb.. ORIGINALMENTE: >500 VCF rn la carpeta
+	echo SEGUNDA LINEA GONZALO
+	bcftools merge -O z -o ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/subset_vcfs_merge_*_imputed.vcf.gz	
+
+else
+    # solo hay 1 VCF (MERGE_AA), no hay que merge nada: originalmente <500 VCF en new_vcf
+	echo SEGUNDA LINEA GRACIELA
+	cp ${path_maf}/tmp/subset_vcfs_merge_*_imputed.vcf.gz ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz
+fi
+
+
 
 SUBENDTIME=$(date +%s)
 echo "	Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
+echo "  Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds" 
 
 ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
+echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 
 
 
@@ -294,6 +365,7 @@ echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 
 echo "PLINK RELATIONSHIP CALCULATION" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 STARTTIME=$(date +%s)
+echo "PLINK RELATIONSHIP CALCULATION"
 
 mkdir ${path_maf}/tmp/plinkout
 cd ${path_maf}/tmp/plinkout
@@ -327,7 +399,7 @@ lista_muestras_excluidas.tsv
 ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
-
+echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" 
 
 
 
@@ -340,6 +412,7 @@ echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 
 echo "MAKING THE DEFINITIVE MERGED AND IMPUTED VCFs" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 STARTTIME=$(date +%s)
+echo "MAKING THE DEFINITIVE MERGED AND IMPUTED VCFs"
 
 mkdir "${path_maf}/merged_vcf/${date_dir}"
 mkdir "${path_maf}/imputed_vcf/${date_dir}"
@@ -400,7 +473,7 @@ tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
-
+echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" 
 
 
 
@@ -412,17 +485,31 @@ echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 
 echo "DATABASE CREATION" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 STARTTIME=$(date +%s)
+echo "DATABASE CREATION" 
 
 mkdir "${path_maf}/db/${date_dir}"
 
 cd ${path_maf}/db/${date_dir}/
 
 
-python ${task_dir}/callMAF.py \
+#python3 ${task_dir}/callMAF.py \
+#--multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
+#--pathology ${mymetadatapathology_uniq} \
+#--mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
+#--samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
+
+#NECESITO LA VERSION 0.2.120 de hail, hasta que en la uam no la actualicen la que hay en /lustre/local/miniconda/python-3.6/lib/python3.6/site-packages/hail-0.2.30.dist-info
+#cargo mi environment que tiene hail 0.2.120
+source /home/graciela/anaconda3/bin/activate hail
+
+python3 ${task_dir}/sub_callMAF.py \
 --multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
 --pathology ${mymetadatapathology_uniq} \
 --mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
+--tmpdir ${path_maf}/tmp/hail \
 --samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
+
+source /home/graciela/anaconda3/bin/deactivate
 
 
 python ${task_dir}/changeFormat.py \
@@ -435,10 +522,24 @@ python ${task_dir}/changeFormat.py \
 bgzip -c ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf > ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
 tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
 
+
+#######GUR: añadir lo del ID para que se creen bien las columnas de la base de datos 
+
+#1) SET ID COLUMN:
+
+bcftools annotate --set-id '%CHROM\_%POS\_%REF\_%FIRST_ALT' MAFdb_AN20_${date_paste}.vcf.gz > MAFdb_AN20_${date_paste}_ID.vcf.gz
+
+# 2) COMPRIMIR BIEN EL NUEVO id.vcf.GZ y ademas crearle su .tbi INDEX)
+mv MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
+bcftools view -Oz -o MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
+htsfile MAFdb_AN20_${date_paste}_ID.vcf.gz
+bcftools index -t MAFdb_AN20_${date_paste}_ID.vcf.gz ##by default is .csi -> hay que poner opcion -t para que me del el .tbi
+
+
 ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
-
+echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" 
 
 
 
@@ -472,7 +573,9 @@ rm -r ${path_maf}/individual_vcf/discarded_vcf_tmp
 rm -r ${path_maf}/coverage/discarded_bed_tmp
 
 
-
 echo "FINAL:" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo $(date) >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
+echo "FINAL:"
+echo $(date)
+#'

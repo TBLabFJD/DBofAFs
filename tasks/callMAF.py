@@ -1,9 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 # coding: utf-8
+
+
 
 import hail as hl
 import time
 import argparse
+import os
 
 def main(args):
 
@@ -13,26 +16,67 @@ def main(args):
     metadata = args.pathology
     mafdb_file = args.mafdb
     sample_group_file = args.samplegroup 
+    # Read the TMPDIR environment variable
+    tmpdir = os.environ.get('TMPDIR')
+    ############ GUR ADDED ON 3/06/2024: redirigir el tmp que general hail porque ahora va al /tmp de la UAM que esta petado
+    hl.init(tmp_dir=tmpdir,spark_conf={"spark.local.dir": tmpdir})
+    
 
-
+    #### GUR CHANGE REFERENCE GENOME LINE 22 -> BEFORE: reference_genome='GRCh37'and after reference_genome='GRCh38'
 
     # reading data
+    #previous lines gonzalo: HACE UN CONTIG RECODING, esto es necesario para el genoma 37 -> chrX se convierte en X, chr1 se convierte en 1
+    #mychrrename={'chrX': 'X','chr1': '1','chr2': '2','chr3': '3','chr4': '4','chr5': '5','chr6': '6','chr7': '7','chr8': '8','chr9': '9','chr10': '10','chr11': '11','chr12': '12','chr13': '13','chr14': '14','chr15': '15','chr16': '16','chr17': '17','chr18': '18','chr19': '19','chr20': '20','chr21': '21','chr22': '22', 'chrY':'Y'}
+    #mt = hl.import_vcf(mergedVCF, force_bgz=True, reference_genome='GRCh38',contig_recoding = mychrrename, call_fields=['GT','PGT'], array_elements_required=False)
 
-    mychrrename={'chrX': 'X','chr1': '1','chr2': '2','chr3': '3','chr4': '4','chr5': '5','chr6': '6','chr7': '7','chr8': '8','chr9': '9','chr10': '10','chr11': '11','chr12': '12','chr13': '13','chr14': '14','chr15': '15','chr16': '16','chr17': '17','chr18': '18','chr19': '19','chr20': '20','chr21': '21','chr22': '22', 'chrY':'Y'}
-    mt = hl.import_vcf(mergedVCF, force_bgz=True, reference_genome='GRCh37',contig_recoding = mychrrename, call_fields=['GT','PGT'], array_elements_required=False)
+    ##en caso del genoma 38: no hay que set el parametro contig_recoding porque los cromosomas ya vienen siendo chr1, chr2 y eso es lo que queremos: https://discuss.hail.is/t/contig-1-is-not-in-the-reference-genome-grch38-error/1841
+    mt = hl.import_vcf(mergedVCF, force_bgz=True, reference_genome='GRCh38', call_fields=['GT','PGT'], array_elements_required=False)
+    
+
+
+    
     #mt = mt.key_rows_by('locus').distinct_by_row().key_rows_by('locus', 'alleles')
     mt = hl.split_multi_hts(mt, permit_shuffle=True)
     table = (hl.import_table(metadata, impute=True).key_by('SAMPLE'))
     mt = mt.annotate_cols(**table[mt.s])
     mt.count()
 
+    ########################################## ORIGINAL GONZALO #######################################
     # defining pathology categories
 
-    cut_dict = {'CATEGORY': hl.agg.filter(hl.is_defined(mt.CATEGORY), hl.agg.counter(mt.CATEGORY))}
-    cut_data = mt.aggregate_cols(hl.struct(**cut_dict))
-    print(cut_dict)
-    print(cut_data)
-    print("DICCIONARIO LISTO")
+    #cut_dict = {'CATEGORY': hl.agg.filter(hl.is_defined(mt.CATEGORY), hl.agg.counter(mt.CATEGORY))}
+    #cut_data = mt.aggregate_cols(hl.struct(**cut_dict))
+    #print(cut_dict)
+    #print(cut_data)
+    #print("DICCIONARIO LISTO")
+
+    #sample_group_filters = [({}, True)]
+
+    #print(sample_group_filters)
+    #print("SAMPLE GROUP FILTERS")
+
+    #sample_group_filters.extend([
+            #({'DS': CATEGORY}, mt.CATEGORY == CATEGORY) for CATEGORY in cut_data.CATEGORY
+        #] +  [
+            #({'P': CATEGORY}, mt.CATEGORY != CATEGORY) for CATEGORY in cut_data.CATEGORY
+        #])
+    ########################################## FIN ORIGINAL GONZALO #######################################
+
+    
+    ########################################## GUR 3/06/2024: 2 CATEGORIA Y SUBCATEGORIA #######################################
+    # defining pathology categories
+
+    cut_dict_CAT = {'CATEGORY': hl.agg.filter(hl.is_defined(mt.CATEGORY), hl.agg.counter(mt.CATEGORY))}
+    cut_data_CAT = mt.aggregate_cols(hl.struct(**cut_dict_CAT))
+    print(cut_dict_CAT)
+    print(cut_data_CAT)
+    print("DICCIONARIO LISTO CATEGORY")
+
+    cut_dict_SUBCAT = {'SUBCATEGORY': hl.agg.filter(hl.is_defined(mt.SUBCATEGORY), hl.agg.counter(mt.SUBCATEGORY))}
+    cut_data_SUBCAT = mt.aggregate_cols(hl.struct(**cut_dict_SUBCAT))
+    print(cut_dict_SUBCAT)
+    print(cut_data_SUBCAT)
+    print("DICCIONARIO LISTO SUBCATEGORY")
 
     sample_group_filters = [({}, True)]
 
@@ -40,11 +84,17 @@ def main(args):
     print("SAMPLE GROUP FILTERS")
 
     sample_group_filters.extend([
-            ({'DS': CATEGORY}, mt.CATEGORY == CATEGORY) for CATEGORY in cut_data.CATEGORY
+            ({'DS': CATEGORY}, mt.CATEGORY == CATEGORY) for CATEGORY in cut_data_CAT.CATEGORY
         ] +  [
-            ({'P': CATEGORY}, mt.CATEGORY != CATEGORY) for CATEGORY in cut_data.CATEGORY
+            ({'P': CATEGORY}, mt.CATEGORY != CATEGORY) for CATEGORY in cut_data_CAT.CATEGORY
+        ] +  [
+            ({'DS': SUBCATEGORY}, mt.SUBCATEGORY == SUBCATEGORY) for SUBCATEGORY in cut_data_SUBCAT.SUBCATEGORY
         ])
+    ########################################## FIN ORIGINAL GONZALO #######################################
 
+
+
+    
     print("SAMPLE GROUP FILTERS 2")
 
     for i in range(len(sample_group_filters)):
