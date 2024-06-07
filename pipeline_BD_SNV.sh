@@ -122,8 +122,8 @@ if [[ $(echo "$duplicates" | wc -l) -gt 0 ]]; then
     echo "$duplicates"
 
     while IFS= read -r sample; do
-    	files_vcf=($(find . -type f -name "${sample}*.vcf.gz"))
-	files_bed=($(find . -type f -name "${sample}*.global.quantized.bed"))
+    	files_vcf=($(find "${path_maf}/individual_vcf/new_vcf" -type f -name "${sample}*.vcf.gz"))
+	files_bed=($(find "${path_maf}/coverage/new_bed" -type f -name "${sample}*.global.quantized.bed"))
         vcf_wgs_files=()
         vcf_wes_files=()
         vcf_ces_files=()
