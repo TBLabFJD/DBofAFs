@@ -569,7 +569,7 @@ then
 else
 	##### gonzalo, coge el "tmp_imputes.vcf" y el "tmp_merged.vcf" quita las muestras excluidas y lo llama como el definitivo y lo mueve a otro lado
 	# Removing samples from merged and imputed vcf, ES DECIR QUITAR EN MI CASO LAS REPEAT1, REPEAT2 ETC QUE NO QUIERA (LAS COLUMNAS DEL GENOTIPO)
- 	In summary, these commands are filtering the input VCF files based on certain criteria, removing the string "dUpTaGgG" from each line, and saving the modified VCF files with new filenames.
+ 	#In summary, these commands are filtering the input VCF files based on certain criteria, removing the string "dUpTaGgG" from each line, and saving the modified VCF files with new filenames.
 	#bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
 	#bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 
