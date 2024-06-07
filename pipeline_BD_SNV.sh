@@ -214,7 +214,7 @@ rename_files() {
         date_part=$(echo "$original_vcf_filename" | grep -oE '[0-9]{8}')
 
         # Construct the new VCF filename
-        new_vcf_filename="dUpTaGgG${i}${original_vcf_filename}"
+        new_vcf_filename="repeat${i}${original_vcf_filename}"
 
         # Rename the VCF file
         mv "$vcf_file" "${path_maf}/individual_vcf/new_vcf/${new_vcf_filename}"
@@ -228,7 +228,7 @@ rename_files() {
 
         if [[ -n "$bed_file" ]]; then
             original_bed_filename=$(basename "$bed_file")
-            new_bed_filename="dUpTaGgG${i}${original_bed_filename}"
+            new_bed_filename="repeat${i}${original_bed_filename}"
             mv "$bed_file" "${path_maf}/coverage/new_bed/${new_bed_filename}"
         fi
 
@@ -242,7 +242,7 @@ while IFS= read -r sample; do
     rename_files "$sample" 1
 done < "$dup_file"
 
-###### ahora YA SE HAN QUEDADO  los duplicate samples renombrados tal que así: dUpTaGgG119-0986.hg38.gatk.CES.v41.20240315.vcf.gz dUpTaGgG219-0986.hg38.gatk.CES.v41.20240315.vcf.gz y así estan controlados y tambien sus correspondientes BEDs
+###### ahora YA SE HAN QUEDADO  los duplicate samples renombrados tal que así: repeat119-0986.hg38.gatk.CES.v41.20240315.vcf.gz repeat219-0986.hg38.gatk.CES.v41.20240315.vcf.gz y así estan controlados y tambien sus correspondientes BEDs
 
 
 
@@ -567,11 +567,23 @@ then
 	mv ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz 
 	mv ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz 
 else
-	# Removing samples from merged and imputed vcf
+	##### gonzalo, coge el "tmp_imputes.vcf" y el "tmp_merged.vcf" quita las muestras excluidas y lo llama como el definitivo y lo mueve a otro lado
+	# Removing samples from merged and imputed vcf, ES DECIR QUITAR EN MI CASO LAS REPEAT1, REPEAT2 ETC QUE NO QUIERA (LAS COLUMNAS DEL GENOTIPO)
+ 	In summary, these commands are filtering the input VCF files based on certain criteria, removing the string "dUpTaGgG" from each line, and saving the modified VCF files with new filenames.
+	#bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
+	#bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 
-	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
-	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
-
+ 	### yo: cojo el "tmp_imputes.vcf" y el "tmp_merged.vcf y los limpio y los nombro como tmp_2_imputed.vcf y tmp_2_merged y asi luego puedo volver a limpiarlos,
+  	#porque tendre que: 1) quitar los dup (dup1 y dup2 por ejemplo) de genotipo y 2) luego si se queda el dup3 renombrar todo para que se quite esa coletilla 
+	## 1) quitar columna genotipo para dup1 y dup2 segun muestras excluidas y cuardarlo en un imputed y merged tmp2
+	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/tmp/imputed_${date_paste}_tmp_2.vcf.gz
+	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/tmp/merged_${date_paste}_tmp_2.vcf.gz
+	
+ 	### quitar coletilla de repeat3 a lo largo de todo el imputed y el merged que se ha quedado en el vcf temporal de merged y imputed
+ 	bcftools view ${path_maf}/tmp/imputed_${date_paste}_tmp_2.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
+  	bcftools view ${path_maf}/tmp/merged_${date_paste}_tmp_2.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
+ 
+  	#mover las excluidas a excluidas 
 	for i in $(cat ${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv);
 	do
 		mv ${path_maf}/individual_vcf/incorporated_vcf/${i}* ${path_maf}/individual_vcf/discarded_vcf_tmp/
@@ -582,23 +594,20 @@ else
 	done
 
 
-	# Rename duplicate samples
-
+	# Rename duplicate samples: DUP GONZALO 
+	#### las de dUptag, no las mias
 	for vcffile in ${path_maf}/individual_vcf/*/dUpTaGgG*.gz 
 	do
 		bcftools view ${vcffile} | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/individual_vcf/tmp.vcf.gz
 		mv ${path_maf}/individual_vcf/tmp.vcf.gz ${vcffile}
 	done
 
- 	
-	for vcffile in ${path_maf}/individual_vcf/*/dUpTaGgG*.gz 
+  	# De mi dup3 que se haya quedado, quitarle al vcf individual todas las coletillas de dup3 que encuentre
+	for vcffile in ${path_maf}/individual_vcf/*/repeat*.gz 
 	do
-	    bcftools view ${vcffile} | sed "s/dUpTaGgG[0-9]//g" | bgzip -c > ${path_maf}/individual_vcf/tmp.vcf.gz
-	    mv ${path_maf}/individual_vcf/tmp.vcf.gz ${vcffile}
+		bcftools view ${vcffile} | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/individual_vcf/tmp.vcf.gz
+		mv ${path_maf}/individual_vcf/tmp.vcf.gz ${vcffile}
 	done
-
- 	
-
 
 	# # Perl rename
 	# rename s/"dUpTaGgG"/""/g ${path_maf}/individual_vcf/incorporated_vcf/* # The util-linux version, with syntax rename fgh jkl fgh*
@@ -615,6 +624,15 @@ else
 	rename "dUpTaGgG" "" ${path_maf}/coverage/incorporated_bed/*
 	rename "dUpTaGgG" "" ${path_maf}/coverage/discarded_bed_tmp/*
 	rename "dUpTaGgG" "" ${path_maf}/coverage/new_bed/*
+
+  	### de mis repeat1, repeat2 de todos lados, quitarles la coletilla a todos (REPEAT1, REPEAT2... ETC)
+   	rename 's/repeat\K\d//g' ${path_maf}/individual_vcf/incorporated_vcf/* 
+	rename 's/repeat\K\d//g' ${path_maf}/individual_vcf/discarded_vcf_tmp/*
+	rename 's/repeat\K\d//g' ${path_maf}/individual_vcf/new_vcf/*
+	rename 's/repeat\K\d//g' ${path_maf}/coverage/incorporated_bed/*
+	rename 's/repeat\K\d//g' ${path_maf}/coverage/discarded_bed_tmp/*
+	rename 's/repeat\K\d//g' ${path_maf}/coverage/new_bed/*
+
 
 fi
 tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
