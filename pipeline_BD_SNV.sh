@@ -34,14 +34,6 @@ mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs
 # Task directory
 task_dir="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks"
 
-
-
-
-
-
-
-
-
 date_paste="$(date +"%Y_%m_%d")"
 date_dir="date_${date_paste}"
 
@@ -57,10 +49,6 @@ echo $(date) >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "INICIO:"
 echo $(date)
-
-
-
-
 
 
 
@@ -134,37 +122,56 @@ if [[ $(echo "$duplicates" | wc -l) -gt 0 ]]; then
     echo "$duplicates"
 
     while IFS= read -r sample; do
-        files=($(find . -type f -name "${sample}*.vcf.gz"))
+    	files_vcf=($(find . -type f -name "${sample}*.vcf.gz"))
+	files_bed=($(find . -type f -name "${sample}*.global.quantized.bed"))
+        vcf_wgs_files=()
+        vcf_wes_files=()
+        vcf_ces_files=()
+        bed_wgs_files=()
+        bed_wes_files=()
+        bed_ces_files=()
 
-        wgs_files=()
-        wes_files=()
-        ces_files=()
-
-        for file in "${files[@]}"; do
+        for file in "${files_vcf[@]}"; do
             case "$file" in
-                *WGS*) wgs_files+=("$file") ;;
-                *WES*) wes_files+=("$file") ;;
-                *CES*) ces_files+=("$file") ;;
+                *WGS*) vcf_wgs_files+=("$file") ;;
+                *WES*) vcf_wes_files+=("$file") ;;
+                *CES*) vcf_ces_files+=("$file") ;;
+            esac
+        done
+        
+        for file in "${files_bed[@]}"; do
+            case "$file" in
+                *WGS*) bed_wgs_files+=("$file") ;;
+                *WES*) bed_wes_files+=("$file") ;;
+                *CES*) bed_ces_files+=("$file") ;;
             esac
         done
 
         # Function to move file pairs to discarded directory
-        move_to_discarded() {
+        move_to_discarded_vcf() {
             local files_to_move=("$@")
             for f in "${files_to_move[@]}"; do
                 mv "$f" ${path_maf}/individual_vcf/discarded_vcf/
                 mv "${f}.tbi" ${path_maf}/individual_vcf/discarded_vcf/
             done
         }
-
+        move_to_discarded_bed() {
+            local files_to_move=("$@")
+            for f in "${files_to_move[@]}"; do
+                mv "$f" ${path_maf}/coverage/discarded_bed/
+            done
+        }
+                
         # Prioritize file types
-        if [[ ${#wgs_files[@]} -ge 1 ]]; then
-            move_to_discarded "${wes_files[@]}" "${ces_files[@]}"
+        if [[ ${#vcf_wgs_files[@]} -ge 1 ]]; then
+            move_to_discarded_vcf "${vcf_wes_files[@]}" "${vcf_ces_files[@]}"
+            move_to_discarded_bed "${bed_wes_files[@]}" "${bed_ces_files[@]}"
             echo "$sample: keeping all WGS"
-        elif [[ ${#wes_files[@]} -ge 1 ]]; then
-            move_to_discarded "${ces_files[@]}"
+        elif [[ ${#vcf_wes_files[@]} -ge 1 ]]; then
+            move_to_discarded_vcf "${vcf_ces_files[@]}"
+            move_to_discarded_bed "${bed_ces_files[@]}"
             echo "$sample: keeping all WES"
-        elif [[ ${#ces_files[@]} -ge 1 ]]; then
+        elif [[ ${#vcf_ces_files[@]} -ge 1 ]]; then
             echo "$sample: keeping all CES"
         else
             echo "$sample: keeping all samples"
@@ -174,8 +181,6 @@ if [[ $(echo "$duplicates" | wc -l) -gt 0 ]]; then
 
     exit 1
 fi
-
-################################### SE ME HA OLVIDADO QUE TAMBIEN TENGO QUE MOVER LOS BEDS A DISCARDED A LA VEZ JEJE
 
 ############### fin quedarnos con las muestras de un mismo tipo y tantas como se hayan secuenciado ###############
 
@@ -584,6 +589,15 @@ else
 		bcftools view ${vcffile} | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/individual_vcf/tmp.vcf.gz
 		mv ${path_maf}/individual_vcf/tmp.vcf.gz ${vcffile}
 	done
+
+ 	
+	for vcffile in ${path_maf}/individual_vcf/*/dUpTaGgG*.gz 
+	do
+	    bcftools view ${vcffile} | sed "s/dUpTaGgG[0-9]//g" | bgzip -c > ${path_maf}/individual_vcf/tmp.vcf.gz
+	    mv ${path_maf}/individual_vcf/tmp.vcf.gz ${vcffile}
+	done
+
+ 	
 
 
 	# # Perl rename
