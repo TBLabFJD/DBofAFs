@@ -178,8 +178,6 @@ if [[ $(echo "$duplicates" | wc -l) -gt 0 ]]; then
         fi
 
     done <<< "$duplicates"
-
-    exit 1
 fi
 
 ############### fin quedarnos con las muestras de un mismo tipo y tantas como se hayan secuenciado ###############
