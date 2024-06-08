@@ -241,7 +241,20 @@ while IFS= read -r sample; do
 done < "$dup_file"
 
 ###### ahora YA SE HAN QUEDADO  los duplicate samples renombrados tal que así: repeat119-0986.hg38.gatk.CES.v41.20240315.vcf.gz repeat219-0986.hg38.gatk.CES.v41.20240315.vcf.gz y así estan controlados y tambien sus correspondientes BEDs
-
+# tras dejarlos renombrados con repeat1XX-XXXX.vcf.gz, repeat2XX-XXX.vcf.gz hay que ABRIR los vcfs y 
+#renombrar todas las veces que aparezca el sample name XX-XXXX y cambairlo por repeatYXX-XXX
+for vcffile in ${path_maf}/individual_vcf/*/repeat*.gz 
+do
+	dir=$(dirname "${vcffile}")
+    	filename=$(basename "${vcffile}")
+        # Extract the pattern (YXX-XXX) from the filename
+    	pattern=$(echo "${filename}" | grep -oP 'repeat\K\d+-\d+')
+        # Define the replacement pattern
+    	replacement="repeat${pattern}"
+     	## cambiar todos los XX-XXXX por repeatYXX-XXX, comprimir vcf y guardar en temporary file
+     	bcftools view ${vcffile} | sed "s/XX-XXX/${replacement}/g" | bgzip -c > ${path_maf}/individual_vcf/tmp.vcf.gz"
+	mv ${path_maf}/individual_vcf/tmp.vcf.gz ${vcffile}
+done
 
 
 ################### ESTE CODIGO ES SOLO PARA CUANDO YA HABIA INCORPORATED VCFS
@@ -600,7 +613,7 @@ else
 		mv ${path_maf}/individual_vcf/tmp.vcf.gz ${vcffile}
 	done
 
-  	# De mi dup3 que se haya quedado, quitarle al vcf individual todas las coletillas de dup3 que encuentre
+  	# De mi dup3 que se haya quedado, quitarle al vcf individual todas las coletillas de dup3 que encuentre dentro de todo el vcf
 	for vcffile in ${path_maf}/individual_vcf/*/repeat*.gz 
 	do
 		bcftools view ${vcffile} | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/individual_vcf/tmp.vcf.gz
