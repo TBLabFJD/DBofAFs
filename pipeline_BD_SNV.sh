@@ -244,18 +244,34 @@ done < "$dup_file"
 # tras dejarlos renombrados con repeat1XX-XXXX.vcf.gz, repeat2XX-XXX.vcf.gz hay que ABRIR los vcfs y 
 #renombrar todas las veces que aparezca el sample name XX-XXXX y cambairlo por repeatYXX-XXX
 for vcffile in ${path_maf}/individual_vcf/new_vcf/*/repeat*.gz; do
-	dir=$(dirname "${vcffile}")
+ 	dir=$(dirname "${vcffile}")
 	filename=$(basename "${vcffile}")
-	# Extract the pattern (YXX-XXX) from the filename
-	pattern=$(echo "${filename}" | grep -oP 'repeat\K\d+-\d+')
-	# Define the replacement pattern
-	replacement="repeat${pattern}"
-	## cambiar todos los XX-XXXX por repeatYXX-XXX, comprimir vcf y guardar en temporary file
-	bcftools view ${vcffile} | sed "s/XX-XXX/${replacement}/g" | bgzip -c > "${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz"
-	mv ${path_maf}/individual_vcf/tmp.vcf.gz ${vcffile}
- 	tabix -p vcf ${vcffile} > ${path_maf}/individual_vcf/new_vcf/${vcffile}.tbi
+ 	# Extract the new pattern (repeatYXX-XXXX) from the filename
+ 	pattern_new=$(echo ${filename} | grep -oP 'repeat\d+-\d+')
+  	# Extract the old pattern (XX-XXXX) from the filename
+ 	pattern_old=$(echo ${pattern_new:7})
+  	rm ${vcffile}.tbi #remove old index
+   	bcftools view ${vcffile} | sed "s/${pattern_old}/${pattern_new}/g" | bgzip -c > "${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz"
+	tabix -p vcf ${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz
+ 	mv ${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz ${vcffile}
+  	mv ${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz.tbi ${vcffile}.tbi
 done
- 
+
+
+
+#for vcffile in /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/nombres_vcfs/repeat*.gz; do
+ 	#dir=$(dirname "${vcffile}")
+	#filename=$(basename "${vcffile}")
+ 	# Extract the new pattern (repeatYXX-XXXX) from the filename
+ 	#pattern_new=$(echo ${filename} | grep -oP 'repeat\d+-\d+')
+  	# Extract the old pattern (XX-XXXX) from the filename
+ 	#pattern_old=$(echo ${pattern_new:7})
+  	#rm ${vcffile}.tbi #remove old index
+	#bcftools view ${vcffile} | sed "s/${pattern_old}/${pattern_new}/g" | bgzip -c > "/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/nombres_vcfs/tmp.vcf.gz"
+	#tabix -p vcf /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/nombres_vcfs/tmp.vcf.gz
+ 	#mv /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/nombres_vcfs/tmp.vcf.gz ${vcffile}
+  	#mv /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/nombres_vcfs/tmp.vcf.gz.tbi ${vcffile}.tbi
+#done
 
 
 ################### ESTE CODIGO ES SOLO PARA CUANDO YA HABIA INCORPORATED VCFS
