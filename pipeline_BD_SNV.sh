@@ -243,7 +243,7 @@ done < "$dup_file"
 ###### ahora YA SE HAN QUEDADO  los duplicate samples renombrados tal que así: repeat119-0986.hg38.gatk.CES.v41.20240315.vcf.gz repeat219-0986.hg38.gatk.CES.v41.20240315.vcf.gz y así estan controlados y tambien sus correspondientes BEDs
 # tras dejarlos renombrados con repeat1XX-XXXX.vcf.gz, repeat2XX-XXX.vcf.gz hay que ABRIR los vcfs y 
 #renombrar todas las veces que aparezca el sample name XX-XXXX y cambairlo por repeatYXX-XXX
-for vcffile in ${path_maf}/individual_vcf/*/repeat*.gz; do
+for vcffile in ${path_maf}/individual_vcf/new_vcf/*/repeat*.gz; do
 	dir=$(dirname "${vcffile}")
 	filename=$(basename "${vcffile}")
 	# Extract the pattern (YXX-XXX) from the filename
@@ -251,8 +251,9 @@ for vcffile in ${path_maf}/individual_vcf/*/repeat*.gz; do
 	# Define the replacement pattern
 	replacement="repeat${pattern}"
 	## cambiar todos los XX-XXXX por repeatYXX-XXX, comprimir vcf y guardar en temporary file
-	bcftools view ${vcffile} | sed "s/XX-XXX/${replacement}/g" | bgzip -c > "${path_maf}/individual_vcf/tmp.vcf.gz"
+	bcftools view ${vcffile} | sed "s/XX-XXX/${replacement}/g" | bgzip -c > "${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz"
 	mv ${path_maf}/individual_vcf/tmp.vcf.gz ${vcffile}
+ 	tabix -p vcf ${vcffile} > ${path_maf}/individual_vcf/new_vcf/${vcffile}.tbi
 done
  
 
