@@ -614,21 +614,22 @@ else
   	#mover las excluidas a excluidas 
 	for i in $(cat ${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv);
 	do
-		mv ${path_maf}/individual_vcf/incorporated_vcf/${i}* ${path_maf}/individual_vcf/discarded_vcf_tmp/
-		mv ${path_maf}/coverage/incorporated_bed/${i}* ${path_maf}/coverage/discarded_bed_tmp/
+ 		# ESTO DE INCORPORATED ES SOLO PARA CUANDO SE ACTUALICE LA BASE DE DATOS LA PROXIMA VEZ PORQUE AHORA NO HAY INCORPORATED
+		#mv ${path_maf}/individual_vcf/incorporated_vcf/${i}* ${path_maf}/individual_vcf/discarded_vcf_tmp/
+		#mv ${path_maf}/coverage/incorporated_bed/${i}* ${path_maf}/coverage/discarded_bed_tmp/
 
 		mv ${path_maf}/individual_vcf/new_vcf/${i}* ${path_maf}/individual_vcf/discarded_vcf_tmp/
 		mv ${path_maf}/coverage/new_bed/${i}* ${path_maf}/coverage/discarded_bed_tmp/
 	done
 
 
-	# Rename duplicate samples: DUP GONZALO 
+	# Rename duplicate samples: DUP GONZALO -> ESTO PARA CUANDO SE ACTUALICE LA BASE DE DATOS Y YA HAYA EN INCOPORATED POR SI SE LE METE UNA NUEVA QUE YA ESTUVIERA EN LA BASE DE DATOS
 	#### las de dUptag, no las mias
-	for vcffile in ${path_maf}/individual_vcf/*/dUpTaGgG*.gz 
-	do
-		bcftools view ${vcffile} | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/individual_vcf/tmp.vcf.gz
-		mv ${path_maf}/individual_vcf/tmp.vcf.gz ${vcffile}
-	done
+	#for vcffile in ${path_maf}/individual_vcf/*/dUpTaGgG*.gz 
+	#do
+		#bcftools view ${vcffile} | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/individual_vcf/tmp.vcf.gz
+		#mv ${path_maf}/individual_vcf/tmp.vcf.gz ${vcffile}
+	#done
 
   	# De mi dup3 que se haya quedado, quitarle al vcf individual todas las coletillas de dup3 que encuentre dentro de todo el vcf
 	for vcffile in ${path_maf}/individual_vcf/*/repeat*.gz 
@@ -645,22 +646,21 @@ else
 	# rename s/"dUpTaGgG"/""/g ${path_maf}/coverage/discarded_bed_tmp/*
 	# rename s/"dUpTaGgG"/""/g ${path_maf}/coverage/new_bed/*
 
-	# util-linux rename
-	rename "dUpTaGgG" "" ${path_maf}/individual_vcf/incorporated_vcf/* # The util-linux version, with syntax rename fgh jkl fgh*
-	rename "dUpTaGgG" "" ${path_maf}/individual_vcf/discarded_vcf_tmp/*
-	rename "dUpTaGgG" "" ${path_maf}/individual_vcf/new_vcf/*
-	rename "dUpTaGgG" "" ${path_maf}/coverage/incorporated_bed/*
-	rename "dUpTaGgG" "" ${path_maf}/coverage/discarded_bed_tmp/*
-	rename "dUpTaGgG" "" ${path_maf}/coverage/new_bed/*
+	# util-linux rename: ESTO PARA RENAME LOS ARCHIVOS CON LA COLETILLA DEL DUPP QUE AHORA NO SE HACE
+	#rename "dUpTaGgG" "" ${path_maf}/individual_vcf/incorporated_vcf/* # The util-linux version, with syntax rename fgh jkl fgh*
+	#rename "dUpTaGgG" "" ${path_maf}/individual_vcf/discarded_vcf_tmp/*
+	#rename "dUpTaGgG" "" ${path_maf}/individual_vcf/new_vcf/*
+	#rename "dUpTaGgG" "" ${path_maf}/coverage/incorporated_bed/*
+	#rename "dUpTaGgG" "" ${path_maf}/coverage/discarded_bed_tmp/*
+	#rename "dUpTaGgG" "" ${path_maf}/coverage/new_bed/*
 
   	### de mis repeat1, repeat2 de todos lados, quitarles la coletilla a todos (REPEAT1, REPEAT2... ETC)
-   	rename 's/repeat\K\d//g' ${path_maf}/individual_vcf/incorporated_vcf/* 
-	rename 's/repeat\K\d//g' ${path_maf}/individual_vcf/discarded_vcf_tmp/*
-	rename 's/repeat\K\d//g' ${path_maf}/individual_vcf/new_vcf/*
-	rename 's/repeat\K\d//g' ${path_maf}/coverage/incorporated_bed/*
-	rename 's/repeat\K\d//g' ${path_maf}/coverage/discarded_bed_tmp/*
-	rename 's/repeat\K\d//g' ${path_maf}/coverage/new_bed/*
-
+	#for file in ${path_maf}/individual_vcf/incorporated_vcf/*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv -v "$file" "$(dirname "$file")/$new_file"; done
+	for file in ${path_maf}/individual_vcf/discarded_vcf_tmp/*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv -v "$file" "$(dirname "$file")/$new_file"; done
+	for file in ${path_maf}/individual_vcf/new_vcf/*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv -v "$file" "$(dirname "$file")/$new_file"; done
+	#for file in ${path_maf}/coverage/incorporated_bed/*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv -v "$file" "$(dirname "$file")/$new_file"; done
+	for file in ${path_maf}/coverage/discarded_bed_tmp/*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv -v "$file" "$(dirname "$file")/$new_file"; done
+	for file in ${path_maf}/coverage/new_bed/*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv -v "$file" "$(dirname "$file")/$new_file"; done
 
 fi
 tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
@@ -729,7 +729,8 @@ bcftools annotate --set-id '%CHROM\_%POS\_%REF\_%FIRST_ALT' MAFdb_AN20_${date_pa
 mv MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
 bcftools view -Oz -o MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
 htsfile MAFdb_AN20_${date_paste}_ID.vcf.gz
-bcftools index -t MAFdb_AN20_${date_paste}_ID.vcf.gz ##by default is .csi -> hay que poner opcion -t para que me del el .tbi
+##by default is .csi -> hay que poner opcion -t para que me del el .tbi
+bcftools index -t MAFdb_AN20_${date_paste}_ID.vcf.gz 
 
 
 ENDTIME=$(date +%s)
