@@ -655,15 +655,13 @@ else
 	#rename "dUpTaGgG" "" ${path_maf}/coverage/new_bed/*
 
   	### de mis repeat1, repeat2 de todos lados, quitarles la coletilla a todos (REPEAT1, REPEAT2... ETC)
-	for file in ${path_maf}/individual_vcf/incorporated_vcf/*; 
- 	do 
-  		new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv -v "$file" "$(dirname "$file")/$new_file"
-    	done
-	for file in ${path_maf}/individual_vcf/discarded_vcf_tmp/*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv -v "$file" "$(dirname "$file")/$new_file"; done
-	for file in ${path_maf}/individual_vcf/new_vcf/*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv -v "$file" "$(dirname "$file")/$new_file"; done
-	for file in ${path_maf}/coverage/incorporated_bed/*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv -v "$file" "$(dirname "$file")/$new_file"; done
-	for file in ${path_maf}/coverage/discarded_bed_tmp/*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv -v "$file" "$(dirname "$file")/$new_file"; done
-	for file in ${path_maf}/coverage/new_bed/*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv -v "$file" "$(dirname "$file")/$new_file"; done
+	#no hay todavia incorporated, porque se mueven al final, ademas va a dar error en las que no tengan la coletilla
+     	#for file in ${path_maf}/individual_vcf/incorporated_vcf/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
+	for file in ${path_maf}/individual_vcf/discarded_vcf_tmp/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
+	for file in ${path_maf}/individual_vcf/new_vcf/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
+	#for file in ${path_maf}/coverage/incorporated_bed/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
+	for file in ${path_maf}/coverage/discarded_bed_tmp/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
+	for file in ${path_maf}/coverage/new_bed/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
 
 fi
 tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
