@@ -699,7 +699,7 @@ cd ${path_maf}/db/${date_dir}/
 #cargo mi environment que tiene hail 0.2.120
 source /home/graciela/anaconda3/bin/activate hail
 
-python3 ${task_dir}/sub_callMAF.py \
+python3 ${task_dir}/supersub_callMAF.py \
 --multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
 --pathology ${mymetadatapathology_uniq} \
 --mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
