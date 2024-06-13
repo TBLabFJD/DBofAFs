@@ -704,7 +704,7 @@ python3 ${task_dir}/supersub_callMAF.py \
 --multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
 --pathology ${mymetadatapathology_uniq} \
 --mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
---tmpdir ${path_maf}/tmp/hail \
+--tmpdir ${TMPDIR} \
 --samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
 
 source /home/graciela/anaconda3/bin/deactivate
