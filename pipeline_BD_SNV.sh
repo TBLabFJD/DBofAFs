@@ -20,6 +20,8 @@ module load bcftools
 #path graciela java 8: nuevo path -> actualizado el 20 abril 2024
 export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.412.b08-2.el8.x86_64/jre/bin:$PATH
 
+# A VER SI CONSIGO MODIFICAR EL TMP DIR DE JAVA DE UNA VEZ
+export JAVA_OPTS="-Djava.io.tmpdir=${TMPDIR}"
 
 ##### GUR: hay que rellenar los paths de donde tenemos las cosas
 ## el data base path es TODA la carpeta donde esta db, vcfs, metadata...
