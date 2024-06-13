@@ -21,7 +21,7 @@ def main(args):
     print(hl.version())
     ############ GUR ADDED ON 3/06/2024: redirigir el tmp que general hail porque ahora va al /tmp de la UAM que esta petado
     # Initialize Hail with the provided Spark configuration
-    hl.init(tmp_dir=my_tmpdir, spark_conf={"spark.local.dir": my_tmpdir})
+    hl.init(tmp_dir=args.tmpdir, spark_conf={"spark.local.dir": args.tmpdir})
     #########################################################################################
 
     #### GUR CHANGE REFERENCE GENOME LINE 22 -> BEFORE: reference_genome='GRCh37'and after reference_genome='GRCh38'
