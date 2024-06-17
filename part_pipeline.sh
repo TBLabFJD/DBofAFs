@@ -66,20 +66,6 @@ echo $(date)
 #============#
 
 
-function PL {
-	path_maf=${1}
-	filename="$(basename ${2})"
-	bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${2} | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt
-} 
-
-export -f PL
-
-parallel "PL" ::: ${path_maf} ::: ${path_maf}/coverage/new_bed/*.bed ${path_maf}/coverage/incorporated_bed/*.bed
-
-SUBENDTIME=$(date +%s)
-echo "	Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo "  Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds"
 
 
 # Runinng imputeValues.py script
