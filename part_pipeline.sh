@@ -42,6 +42,7 @@ task_dir="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks"
 
 #date_paste="$(date +"%Y_%m_%d")"
 #date_dir="date_${date_paste}"
+date_paste="2024_06_15"
 date_dir="date_2024_06_15"
 
 
