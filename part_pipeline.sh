@@ -66,35 +66,6 @@ echo $(date)
 #============#
 
 
-# Make sure there are no overlaping regions so that coverage files have the same number of entries as variants in the merge vcf
-echo "	Remove overlapping regions in new bed files" >> ${path_maf}/metadata/${date_dir}/logfile.txt
-SUBSTARTTIME=$(date +%s)
-echo "  Remove overlapping regions in new bed files"
-
-for file in ${path_maf}/coverage/new_bed/*.bed; 
-do 
-	sort -k1,1 -k2,2n ${file} > ${path_maf}/coverage/new_bed/tmp.bed ; 
-	rm ${path_maf}/coverage/new_bed/tmp.bed; 
-done
-
-SUBENDTIME=$(date +%s)
-echo "	Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo "  Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds"
-
-
-
-# Making coverage files
-echo "	Making coverage files" >> ${path_maf}/metadata/${date_dir}/logfile.txt
-SUBSTARTTIME=$(date +%s)
-echo "  Making coverage files"
-
-# for file in $(ls ${path_maf}/coverage/new_bed/*.bed ${path_maf}/coverage/incorporated_bed/*.bed);
-# do 
-# 	filename="$(basename ${file})"
-# 	bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${file} | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt; 
-# done
-
 function PL {
 	path_maf=${1}
 	filename="$(basename ${2})"
