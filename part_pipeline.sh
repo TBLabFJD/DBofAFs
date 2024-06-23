@@ -27,23 +27,23 @@ export JAVA_OPTS="-Djava.io.tmpdir=${TMPDIR}"
 ## el data base path es TODA la carpeta donde esta db, vcfs, metadata...
 
 # Data base path
-path_maf="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs"
-#path_maf="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/p2_PRUEBAS_DBofAFs"
+#path_maf="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs"
+path_maf="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/p2_PRUEBAS_DBofAFs"
 
 # TSV file with sample-pathology information
 #mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/pru_metadata.tsv" # el normal
 #mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/doble_metadata.tsv" #1 cat y 1 subcat
 #mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/cat_sub_cat.tsv" #varias cat y varias subcat
-mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/all_FJD.txt" #varias cat y varias subcat TODOS CES Y WGS Y WES
-#mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/p2_PRUEBAS_DBofAFs/metadata/all_FJD.txt" #varias cat y varias subcat TODOS CES Y WGS Y WES
+#mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/all_FJD.txt" #varias cat y varias subcat TODOS CES Y WGS Y WES
+mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/p2_PRUEBAS_DBofAFs/metadata/all_FJD.txt" #varias cat y varias subcat TODOS CES Y WGS Y WES
 
 # Task directory
 task_dir="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks"
 
 #date_paste="$(date +"%Y_%m_%d")"
 #date_dir="date_${date_paste}"
-date_paste="2024_06_15"
-date_dir="date_2024_06_15"
+date_paste="2024_06_20"
+date_dir="date_2024_06_20"
 
 
 #mkdir "${path_maf}/metadata/${date_dir}"
@@ -59,13 +59,71 @@ echo $(date)
 
 
 
+# Count the number of VCFs (merge_aa, merge_bb...)
+file_count=$(ls -1 "${path_maf}/tmp/merge."*.vcf.gz 2>/dev/null | wc -l)
+if [ "$file_count" -gt 1 ]; then
+    # HAY MÁS DE 1 VCF PARA MERGE: merge_aa, merge_bb.. ORIGINALMENTE: >500 VCF rn la carpeta
+	echo LINEA GONZALO 
+	bcftools merge -O z -o ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/merge.*.vcf.gz
 
+else
+    # solo hay 1 VCF (MERGE_AA), no hay que merge nada: originalmente <500 VCF en new_vcf
+	echo LINEA GRACIELA
+	cp ${path_maf}/tmp/merge.*.vcf.gz ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz
+fi
+
+#comment gonzalo
+#######if [[ $(ls ${path_maf}/individual_vcf/new_vcf/*.vcf.gz | wc -l) -gt 850 ]]
+
+
+ENDTIME=$(date +%s)
+echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
+echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
+echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 
 #============#
 # IMPUTATION #
 #============#
 
 
+for file in ${path_maf}/coverage/new_bed/*.bed; 
+do 
+	sort -k1,1 -k2,2n ${file} > ${path_maf}/coverage/new_bed/tmp.bed ; 
+	rm ${path_maf}/coverage/new_bed/tmp.bed; 
+done
+
+SUBENDTIME=$(date +%s)
+echo "	Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
+echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
+echo "  Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds"
+
+
+
+# Making coverage files
+echo "	Making coverage files" >> ${path_maf}/metadata/${date_dir}/logfile.txt
+SUBSTARTTIME=$(date +%s)
+echo "  Making coverage files"
+
+# for file in $(ls ${path_maf}/coverage/new_bed/*.bed ${path_maf}/coverage/incorporated_bed/*.bed);
+# do 
+# 	filename="$(basename ${file})"
+# 	bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${file} | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt; 
+# done
+
+function PL {
+	path_maf=${1}
+	filename="$(basename ${2})"
+	bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${2} | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt
+} 
+
+export -f PL
+
+parallel "PL" ::: ${path_maf} ::: ${path_maf}/coverage/new_bed/*.bed ${path_maf}/coverage/incorporated_bed/*.bed
+
+SUBENDTIME=$(date +%s)
+echo "	Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
+echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
+echo "  Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds"
 
 
 # Runinng imputeValues.py script
