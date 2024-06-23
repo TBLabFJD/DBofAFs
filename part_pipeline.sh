@@ -59,27 +59,6 @@ echo $(date)
 
 
 
-# Count the number of VCFs (merge_aa, merge_bb...)
-file_count=$(ls -1 "${path_maf}/tmp/merge."*.vcf.gz 2>/dev/null | wc -l)
-if [ "$file_count" -gt 1 ]; then
-    # HAY MÁS DE 1 VCF PARA MERGE: merge_aa, merge_bb.. ORIGINALMENTE: >500 VCF rn la carpeta
-	echo LINEA GONZALO 
-	bcftools merge -O z -o ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/merge.*.vcf.gz
-
-else
-    # solo hay 1 VCF (MERGE_AA), no hay que merge nada: originalmente <500 VCF en new_vcf
-	echo LINEA GRACIELA
-	cp ${path_maf}/tmp/merge.*.vcf.gz ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz
-fi
-
-#comment gonzalo
-#######if [[ $(ls ${path_maf}/individual_vcf/new_vcf/*.vcf.gz | wc -l) -gt 850 ]]
-
-
-ENDTIME=$(date +%s)
-echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 
 #============#
 # IMPUTATION #
