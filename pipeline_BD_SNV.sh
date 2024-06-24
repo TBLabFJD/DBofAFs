@@ -492,8 +492,9 @@ echo AFTER PARRALEL INPUT
 ### GUR: commenta eveything de aqui para abajo. pARA COMENTAR QUITAR ALMOHADILLA
 
 #: '
-
-
+## mover los covFiles al scratch porque ocupan casi una tera
+mkdir /scratch/graciela/covFiles
+mv ${path_maf}/tmp/covFiles/* /scratch/graciela/covFiles/
 
 ###GUR: PASA LO MISMO QUE ANTES, QUE HAY QUE CONTEMPLAR LA IDEA DE TENER MENOS DE 500 VCFs y que solo hay un subset_vcf_aa, o sea no hay varios entonces
 ##no se puede hacer bcftools merge:
