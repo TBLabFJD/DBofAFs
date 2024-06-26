@@ -81,7 +81,7 @@ echo "	Runinng imputeValues.py script" >> ${path_maf}/metadata/${date_dir}/logfi
 SUBSTARTTIME=$(date +%s)
 echo "  Runinng imputeValues.py script"
 
-bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp/subset_vcfs_merge_"
+#bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp/subset_vcfs_merge_"
 
 function IMPUTE { 
 	path_maf=${1}
@@ -91,8 +91,8 @@ function IMPUTE {
 	iname="$(basename ${filename})"
 
 	# Sepration
-	bcftools view -S ${filename} --min-ac=0 -O z -o ${path_maf}/tmp/${iname}_merged.vcf.gz ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz
-	tabix -p vcf ${path_maf}/tmp/${iname}_merged.vcf.gz
+	#bcftools view -S ${filename} --min-ac=0 -O z -o ${path_maf}/tmp/${iname}_merged.vcf.gz ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz
+	#tabix -p vcf ${path_maf}/tmp/${iname}_merged.vcf.gz
 
 	# Imputation
  	#head -n 5000 en vez de 500 porque el nuevo vcf del merged de todos los cES,WES,WGS tiene muchas mas lineas de ## en el vcf por todos los contigs y tal que dan su info de ID
