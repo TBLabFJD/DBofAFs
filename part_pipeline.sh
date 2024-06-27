@@ -67,7 +67,7 @@ echo "	Runinng imputeValues.py script" >> ${path_maf}/metadata/${date_dir}/logfi
 SUBSTARTTIME=$(date +%s)
 echo "  Runinng imputeValues.py script"
 
-#bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp/subset_vcfs_merge_"
+bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp/subset_vcfs_merge_"
 
 function IMPUTE { 
 	path_maf=${1}
