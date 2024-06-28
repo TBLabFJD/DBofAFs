@@ -67,8 +67,10 @@ echo "	Runinng imputeValues.py script" >> ${path_maf}/metadata/${date_dir}/logfi
 SUBSTARTTIME=$(date +%s)
 echo "  Runinng imputeValues.py script"
 
+# si hacemos vcfs de 450 muestras ahora que hay CES, WES y WGS los vcfs que quedan pesan entre 2-5GB, python no puede luego abrirlos en pandas e imputarlos asi que hay que hacer vcfs mucho más pequeñitos
+# del orden de 500mb, asi que vamos a hacer un split de 150 muestras
 #bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp/subset_vcfs_merge_"
-
+bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 150 - "${path_maf}/tmp/subset_vcfs_merge_"
 function IMPUTE { 
 	path_maf=${1}
 	date_paste=${2}
@@ -109,7 +111,7 @@ function IMPUTE {
 export -f IMPUTE
 
 echo BEFORE PARALLEL INPUT 
-parallel -j 13 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/samples_list/subset_vcfs_merge_*
+parallel -j 10 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/samples_list/subset_vcfs_merge_*
 #parallel -j 13 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
 #parallel "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
 echo AFTER PARRALEL INPUT
