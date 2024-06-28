@@ -28,22 +28,22 @@ export JAVA_OPTS="-Djava.io.tmpdir=${TMPDIR}"
 
 # Data base path
 #path_maf="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs"
-path_maf="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/p2_PRUEBAS_DBofAFs"
+path_maf="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs"
 
 # TSV file with sample-pathology information
 #mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/pru_metadata.tsv" # el normal
 #mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/doble_metadata.tsv" #1 cat y 1 subcat
 #mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/cat_sub_cat.tsv" #varias cat y varias subcat
 #mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/all_FJD.txt" #varias cat y varias subcat TODOS CES Y WGS Y WES
-mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/p2_PRUEBAS_DBofAFs/metadata/all_FJD.txt" #varias cat y varias subcat TODOS CES Y WGS Y WES
+mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/all_FJD.txt" #varias cat y varias subcat TODOS CES Y WGS Y WES
 
 # Task directory
 task_dir="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks"
 
 #date_paste="$(date +"%Y_%m_%d")"
 #date_dir="date_${date_paste}"
-date_paste="2024_06_20"
-date_dir="date_2024_06_20"
+date_paste="2024_06_26"
+date_dir="date_2024_06_26"
 
 
 #mkdir "${path_maf}/metadata/${date_dir}"
@@ -69,8 +69,10 @@ echo "  Runinng imputeValues.py script"
 
 # si hacemos vcfs de 450 muestras ahora que hay CES, WES y WGS los vcfs que quedan pesan entre 2-5GB, python no puede luego abrirlos en pandas e imputarlos asi que hay que hacer vcfs mucho más pequeñitos
 # del orden de 500mb, asi que vamos a hacer un split de 100 muestras
-#bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp/subset_vcfs_merge_"
-bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 100 - "${path_maf}/tmp/subset_vcfs_merge_"
+## me he dado cuenta que da igual porque lo que hace que el vcf sea muy pesado es el numero de filas (todas las variantes) el hecho de tener mas columnas
+#por tener mas muestras no influye tanto y se siguen creando vcfs del orden de 2gb con 100 muestras
+#bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 100 - "${path_maf}/tmp/subset_vcfs_merge_"
+bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp/subset_vcfs_merge_"
 function IMPUTE { 
 	path_maf=${1}
 	date_paste=${2}
@@ -111,7 +113,7 @@ function IMPUTE {
 export -f IMPUTE
 
 echo BEFORE PARALLEL INPUT 
-parallel -j 10 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/samples_list/subset_vcfs_merge_*
+parallel -j 5 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/samples_list/subset_vcfs_merge_*
 #parallel -j 13 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
 #parallel "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
 echo AFTER PARRALEL INPUT
