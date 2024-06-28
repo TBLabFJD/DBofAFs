@@ -45,7 +45,13 @@ def main(args):
     comp = 'gzip' if mergedvcf.endswith('.gz') else None
     
     # Return a simple DataFrame without splitting the INFO column.
-    df = pd.read_csv(mergedvcf, sep = "\t", compression=comp, skiprows=skiprows, dtype='category')
+    #df = pd.read_csv(mergedvcf, sep = "\t", compression=comp, skiprows=skiprows, dtype='category')
+    
+    ##gur read in chunks para que no pete cargando todo en memoria
+    chunk = pd.read_csv(mergedvcf, sep = "\t", compression=comp, skiprows=skiprows, dtype='category',chunksize=1000000)
+    df = pd.concat(chunk)
+    ##end gur
+    
     # df = pd.read_csv(mergedvcf, sep = "\t", compression=comp, skiprows=skiprows)
 
     cols = df.columns
