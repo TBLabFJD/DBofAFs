@@ -68,9 +68,9 @@ SUBSTARTTIME=$(date +%s)
 echo "  Runinng imputeValues.py script"
 
 # si hacemos vcfs de 450 muestras ahora que hay CES, WES y WGS los vcfs que quedan pesan entre 2-5GB, python no puede luego abrirlos en pandas e imputarlos asi que hay que hacer vcfs mucho más pequeñitos
-# del orden de 500mb, asi que vamos a hacer un split de 150 muestras
+# del orden de 500mb, asi que vamos a hacer un split de 100 muestras
 #bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp/subset_vcfs_merge_"
-bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 150 - "${path_maf}/tmp/subset_vcfs_merge_"
+bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 100 - "${path_maf}/tmp/subset_vcfs_merge_"
 function IMPUTE { 
 	path_maf=${1}
 	date_paste=${2}
