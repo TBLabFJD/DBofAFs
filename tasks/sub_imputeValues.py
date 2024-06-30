@@ -6,77 +6,60 @@ Created on Wed Jun  2 17:31:56 2021
 @author: gonzalo
 """
 
-
 import pandas as pd
 import sys
 import glob
 from datetime import datetime
 import argparse
+import psutil
 
-
+def monitor_memory(stage, log_file):
+    memory_info = psutil.virtual_memory()
+    log_file.write(f"{stage} - Memory usage: {memory_info.used / (1024 ** 3):.2f} GB / {memory_info.total / (1024 ** 3):.2f} GB (used / total)\n")
 
 def main(args):
 
     # defining data location
-
     mergedvcf = args.mergedvcf
     skiprows = int(args.skiprows) - 2
     imputedvcf = args.imputedvcf
     covFilesPath = args.covFilesPath 
     clusterSample = args.clusterSample
 
-    # mergedvcf="/home/gonzalo/Documents/imputation/some_samples.vcf"
-    # skiprows="150"
-    # imputedvcf="/home/gonzalo/Documents/imputation/prueba_imputación.txt"
-    # covFilesPath="/home/gonzalo/Documents/imputation/covFiles/"
-    
-    # mergedvcf="/home/gonzalo/UAMssh/fjd/MAF_FJD_v3.0/tmp/some_samples_100.vcf.gz"
-    # skiprows=150
-    # imputedvcf="/home/gonzalo/UAMssh/fjd/MAF_FJD_v3.0/tmp/imputed_some_samples_100.vcf"
-    # covFilesPath="/home/gonzalo/UAMssh/fjd/MAF_FJD_v3.0/tmp/covFiles/"
-    
     f = open(covFilesPath + '/../' + clusterSample + '.out', 'w')
     
     f.write(clusterSample + ": Precarga VCF: " + "\n")
     f.write(str(datetime.now()) + "\n")
     
-    
     # Set the proper argument if the file is compressed.
     comp = 'gzip' if mergedvcf.endswith('.gz') else None
     
-    # Return a simple DataFrame without splitting the INFO column.
-    #df = pd.read_csv(mergedvcf, sep = "\t", compression=comp, skiprows=skiprows, dtype='category')
-    
-    ##gur read in chunks para que no pete cargando todo en memoria
-    chunk = pd.read_csv(mergedvcf, sep = "\t", compression=comp, skiprows=skiprows, dtype='category',chunksize=1000000)
-   # Monitoring memory usage
-for i, chunk in enumerate(chunks):
-    memory_info_before = psutil.virtual_memory()
-    print(f"Chunk {i} - Memory usage before concatenation: {memory_info_before.used / (1024 ** 3):.2f} GB")
-    df = pd.concat([df, chunk]) if 'df' in locals() else chunk
-    memory_info_after = psutil.virtual_memory()
-    print(f"Chunk {i} - Memory usage after concatenation: {memory_info_after.used / (1024 ** 3):.2f} GB")
+    # Process the VCF file in chunks
+    chunk_size = 1000000  # Adjust the chunk size based on available memory
+    chunks = pd.read_csv(mergedvcf, sep="\t", compression=comp, skiprows=skiprows, dtype='category', chunksize=chunk_size)
 
-# Your processing logic here
-    
-    # df = pd.read_csv(mergedvcf, sep = "\t", compression=comp, skiprows=skiprows)
+    monitor_memory("Before reading chunks", f)
 
-    cols = df.columns
+    # Read and concatenate the chunks
+    df_list = []
+    for i, chunk in enumerate(chunks):
+        monitor_memory(f"After reading chunk {i}", f)
+        df_list.append(chunk)
+    
+    df = pd.concat(df_list)
+    monitor_memory("After concatenating chunks", f)
     
     f.write(clusterSample + ": VCF cargado: " + "\n")
     f.write(str(datetime.now()) + "\n")
-    
-    # f.write(clusterSample + ": Tamaño df: " + "\n")
-    # f.write(sys.getsizeof(df) + "\n")
 
-       
+    df.replace(to_replace='./.:.:.:.:.:.:.:.', value='./.:.:.:.:.', inplace=True)
     
-    df.replace(to_replace='./.:.:.:.:.:.:.:.', value='./.:.:.:.:.', inplace = True)
-    
-    diccionario={'.':'./.:.:.:.:.',
-                 '10:inf':'0/0:.:.:.:.',
-                 '1':'./.:.:.:.:.',
-                 '2':'0/0:.:.:.:.'}
+    diccionario = {
+        '.': './.:.:.:.:.',
+        '10:inf': '0/0:.:.:.:.',
+        '1': './.:.:.:.:.',
+        '2': '0/0:.:.:.:.'
+    }
     
     f.write(clusterSample + ": Diccionario: " + "\n")
     f.write(str(diccionario) + "\n")
@@ -84,32 +67,32 @@ for i, chunk in enumerate(chunks):
     f.write(clusterSample + ": Pre-imputacion: " + "\n")
     f.write(str(datetime.now()) + "\n")
     
-    for i in cols[9:]:
+    for i in df.columns[9:]:
         f.write(i + "\n")
         filename = glob.glob(covFilesPath + i + '*')[0]
         f.write(filename + "\n")
-        coverage = pd.read_csv(filename, sep = "\t", dtype='category', header=None)
-        # coverage = pd.read_csv(filename, sep = "\t", header=None)
-        coverage.replace(diccionario, inplace = True)
+        coverage = pd.read_csv(filename, sep="\t", dtype='category', header=None)
+        coverage.replace(diccionario, inplace=True)
         
-        positions=df[df[i] == './.:.:.:.:.'].index    
-        df[i].cat.add_categories('0/0:.:.:.:.', inplace = True)    
-        df.loc[positions,i] = coverage.loc[positions,0]
-    
+        positions = df[df[i] == './.:.:.:.:.'].index    
+        df[i].cat.add_categories('0/0:.:.:.:.', inplace=True)    
+        df.loc[positions, i] = coverage.loc[positions, 0]
+        monitor_memory(f"After processing column {i}", f)
+
     f.write(clusterSample + ": Pre-escritura: " + "\n")
     f.write(str(datetime.now()) + "\n")
     
-    df.to_csv(imputedvcf, sep="\t", index = False, mode="a")
+    df.to_csv(imputedvcf, sep="\t", index=False, mode="a")
     
     f.write(clusterSample + ": Post-escritura: " + "\n")
     f.write(str(datetime.now()) + "\n")
     
-    f.close()
+    monitor_memory("End of script", f)
 
+    f.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-
     parser.add_argument('--mergedvcf', help='Merged VCF')
     parser.add_argument('--skiprows', help='Number of rows to skip')
     parser.add_argument('--imputedvcf', help='Output imputed vcf')
@@ -117,14 +100,4 @@ if __name__ == '__main__':
     parser.add_argument('--clusterSample', help='Cluster of samples')
     
     args = parser.parse_args()
-    # f.write(args + "\n")
     main(args)
-
-
-
-
-
-
-
-
-
