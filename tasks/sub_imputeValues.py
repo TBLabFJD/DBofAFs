@@ -49,8 +49,15 @@ def main(args):
     
     ##gur read in chunks para que no pete cargando todo en memoria
     chunk = pd.read_csv(mergedvcf, sep = "\t", compression=comp, skiprows=skiprows, dtype='category',chunksize=1000000)
-    df = pd.concat(chunk)
-    ##end gur
+   # Monitoring memory usage
+for i, chunk in enumerate(chunks):
+    memory_info_before = psutil.virtual_memory()
+    print(f"Chunk {i} - Memory usage before concatenation: {memory_info_before.used / (1024 ** 3):.2f} GB")
+    df = pd.concat([df, chunk]) if 'df' in locals() else chunk
+    memory_info_after = psutil.virtual_memory()
+    print(f"Chunk {i} - Memory usage after concatenation: {memory_info_after.used / (1024 ** 3):.2f} GB")
+
+# Your processing logic here
     
     # df = pd.read_csv(mergedvcf, sep = "\t", compression=comp, skiprows=skiprows)
 
