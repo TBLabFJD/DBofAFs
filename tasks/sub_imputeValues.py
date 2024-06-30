@@ -63,10 +63,12 @@ def main(args):
         
         monitor_memory(f"After processing chunk {chunk_idx}", f)
         
-        mode = 'a' if chunk_idx > 0 else 'w'
-        header = (chunk_idx == 0)
-        processed_chunk.to_csv(imputedvcf, sep="\t", index=False, mode=mode, header=header)
+        #mode = 'a' if chunk_idx > 0 else 'w'
+        #header = (chunk_idx == 0)
+        #processed_chunk.to_csv(imputedvcf, sep="\t", index=False, mode=mode, header=header)
         
+        #header=false porque ya esta el header con las lineas ## del inicio
+        processed_chunk.to_csv(imputedvcf, sep="\t", index=False, mode="a", header=False)
         monitor_memory(f"After writing chunk {chunk_idx}", f)
     
     f.write(clusterSample + ": Processing completed: " + "\n")
