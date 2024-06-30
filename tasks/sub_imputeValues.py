@@ -68,7 +68,8 @@ def main(args):
         #processed_chunk.to_csv(imputedvcf, sep="\t", index=False, mode=mode, header=header)
         
         #header=false porque ya esta el header con las lineas ## del inicio
-        processed_chunk.to_csv(imputedvcf, sep="\t", index=False, mode="a", header=False)
+        # si pongo header false no se pone la linea de # CHROM, FORMAT... y los samples
+        processed_chunk.to_csv(imputedvcf, sep="\t", index=False, mode="a")
         monitor_memory(f"After writing chunk {chunk_idx}", f)
     
     f.write(clusterSample + ": Processing completed: " + "\n")
