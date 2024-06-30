@@ -72,7 +72,7 @@ echo "  Runinng imputeValues.py script"
 ## me he dado cuenta que da igual porque lo que hace que el vcf sea muy pesado es el numero de filas (todas las variantes) el hecho de tener mas columnas
 #por tener mas muestras no influye tanto y se siguen creando vcfs del orden de 2gb con 100 muestras
 #bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 100 - "${path_maf}/tmp/subset_vcfs_merge_"
-bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp/subset_vcfs_merge_"
+#bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp/subset_vcfs_merge_"
 function IMPUTE { 
 	path_maf=${1}
 	date_paste=${2}
@@ -81,8 +81,8 @@ function IMPUTE {
 	iname="$(basename ${filename})"
 
 	# Sepration
-	bcftools view -S ${filename} --min-ac=0 -O z -o ${path_maf}/tmp/${iname}_merged.vcf.gz ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz
-	tabix -p vcf ${path_maf}/tmp/${iname}_merged.vcf.gz
+	#bcftools view -S ${filename} --min-ac=0 -O z -o ${path_maf}/tmp/${iname}_merged.vcf.gz ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz
+	#tabix -p vcf ${path_maf}/tmp/${iname}_merged.vcf.gz
 
 	# Imputation
  	#head -n 5000 en vez de 500 porque el nuevo vcf del merged de todos los cES,WES,WGS tiene muchas mas lineas de ## en el vcf por todos los contigs y tal que dan su info de ID
@@ -91,7 +91,7 @@ function IMPUTE {
 	bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n ${numrows} > ${path_maf}/tmp/${iname}_imputed.vcf
 
 	#python ${task_dir}/imputeValues.py \
-        python /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks/imputeValues.py \
+        python /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks/sub_imputeValues.py \
 	--mergedvcf ${path_maf}/tmp/${iname}_merged.vcf.gz \
 	--skiprows ${skiprows} \
 	--imputedvcf ${path_maf}/tmp/${iname}_imputed.vcf \
@@ -113,7 +113,8 @@ function IMPUTE {
 export -f IMPUTE
 
 echo BEFORE PARALLEL INPUT 
-parallel -j 5 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
+parallel -j 5 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/samples_list/subset_vcfs_merge_*
+#parallel -j 3 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
 #parallel -j 13 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
 #parallel "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
 echo AFTER PARRALEL INPUT
