@@ -465,7 +465,7 @@ function IMPUTE {
 	bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n ${numrows} > ${path_maf}/tmp/${iname}_imputed.vcf
 
 	#python ${task_dir}/imputeValues.py \
-        python /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks/imputeValues.py \
+        python /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks/sub_imputeValues.py \
 	--mergedvcf ${path_maf}/tmp/${iname}_merged.vcf.gz \
 	--skiprows ${skiprows} \
 	--imputedvcf ${path_maf}/tmp/${iname}_imputed.vcf \
@@ -487,6 +487,8 @@ function IMPUTE {
 export -f IMPUTE
 
 echo BEFORE PARALLEL INPUT 
+#parallel -j 10 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/samples_list/subset_vcfs_merge_*
+#parallel -j 10 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
 parallel "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
 echo AFTER PARRALEL INPUT
 
