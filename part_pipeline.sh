@@ -399,7 +399,7 @@ mv ${path_maf}/tmp/plinkout/*tsv ${path_maf}/metadata/${date_dir}/plinkout
 
 # Removing tmp directory
 # rm -r ${path_maf}/tmp/
-rm -r ${path_maf}/individual_vcf/tmp_vcf/
+# rm -r ${path_maf}/individual_vcf/tmp_vcf/
 
 # Moving the new samples to the incorporated
 mv ${path_maf}/individual_vcf/new_vcf/* ${path_maf}/individual_vcf/incorporated_vcf/
@@ -408,8 +408,8 @@ mv ${path_maf}/coverage/new_bed/* ${path_maf}/coverage/incorporated_bed/
 # Moving temporal discarded samples and removing folder
 mv ${path_maf}/individual_vcf/discarded_vcf_tmp/* ${path_maf}/individual_vcf/discarded_vcf/
 mv ${path_maf}/coverage/discarded_bed_tmp/* ${path_maf}/coverage/discarded_bed/
-rm -r ${path_maf}/individual_vcf/discarded_vcf_tmp
-rm -r ${path_maf}/coverage/discarded_bed_tmp
+# rm -r ${path_maf}/individual_vcf/discarded_vcf_tmp
+# rm -r ${path_maf}/coverage/discarded_bed_tmp
 
 
 echo "FINAL:" >> ${path_maf}/metadata/${date_dir}/logfile.txt
