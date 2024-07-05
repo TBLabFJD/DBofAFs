@@ -487,9 +487,10 @@ function IMPUTE {
 export -f IMPUTE
 
 echo BEFORE PARALLEL INPUT 
-#parallel -j 10 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/samples_list/subset_vcfs_merge_*
-#parallel -j 10 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
-parallel "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
+## esto hay que hacerlo de 10 en 10 para que se borren los imputed sin comprimir porque cada uno son 220gb aprox y habria que tener 2,2 TB de espacio simultaneamente de almacenamiento
+## si queremos correr los 26 troxos de golpe habria que tener 6TB de almacenamiento disponibles 
+parallel -j 10 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
+#parallel "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
 echo AFTER PARRALEL INPUT
 
 ### GUR: commenta eveything de aqui para abajo. pARA COMENTAR QUITAR ALMOHADILLA
