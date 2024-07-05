@@ -63,9 +63,9 @@ echo $(date)
 
 
 # Runinng imputeValues.py script
-echo "	Runinng imputeValues.py script" >> ${path_maf}/metadata/${date_dir}/logfile.txt
-SUBSTARTTIME=$(date +%s)
-echo "  Runinng imputeValues.py script"
+#echo "	Runinng imputeValues.py script" >> ${path_maf}/metadata/${date_dir}/logfile.txt
+#SUBSTARTTIME=$(date +%s)
+#echo "  Runinng imputeValues.py script"
 
 # si hacemos vcfs de 450 muestras ahora que hay CES, WES y WGS los vcfs que quedan pesan entre 2-5GB, python no puede luego abrirlos en pandas e imputarlos asi que hay que hacer vcfs mucho más pequeñitos
 # del orden de 500mb, asi que vamos a hacer un split de 100 muestras
@@ -112,12 +112,12 @@ function IMPUTE {
 
 export -f IMPUTE
 
-echo BEFORE PARALLEL INPUT 
-parallel -j 15 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/samples_list/subset_vcfs_merge_*
+#echo BEFORE PARALLEL INPUT 
+#parallel -j 15 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/samples_list/subset_vcfs_merge_*
 #parallel -j 3 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
 #parallel -j 13 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
 #parallel "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
-echo AFTER PARRALEL INPUT
+#echo AFTER PARRALEL INPUT
 
 ### GUR: commenta eveything de aqui para abajo. pARA COMENTAR QUITAR ALMOHADILLA
 
