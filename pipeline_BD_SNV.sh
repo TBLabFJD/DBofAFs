@@ -460,7 +460,11 @@ function IMPUTE {
 
 	# Imputation
  	#head -n 5000 en vez de 500 porque el nuevo vcf del merged de todos los cES,WES,WGS tiene muchas mas lineas de ## en el vcf por todos los contigs y tal que dan su info de ID
-	skiprows=$(bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n 5000 | grep -n "#CHROM" | sed 's/:.*//')
+
+ 	######### OJO GUR: TENGO QUE ARREGLAR ESTE CODIGO, PORQUE AHORA SE PASA EL IMPUTED SOLO CON LAS METADATA LINES (SKIPROWS=INCLUYENDO LA HEADERER LINEE) PERO LUEGO LE PASO NUMROWS QUE ES SOLO 
+  	### LAS METADATA LINES SIN LA LINEA DE LAS MUESTRAS, Y LUEGO SE PEGA ESTA LINEA DENTRO DEL sub_imputeValues.py, LO UNICO ES QUE COMO AHORA YO HAGO TODO POR CHUNKS
+   	## ES DECIR PROCESO 1 MILLON DE VARIANTES, LAS PEGO, PROCESO OTRO MILLON, Y ASI 40 VECES ENTONCES LA LINEA DEL HEADER SE VA REPITIENDO Y HAY QUE QUITARLA EN ALGUN MOMENTO
+ 	skiprows=$(bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n 5000 | grep -n "#CHROM" | sed 's/:.*//')
 	numrows="$((${skiprows}-1))"
 	bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n ${numrows} > ${path_maf}/tmp/${iname}_imputed.vcf
 
@@ -477,9 +481,15 @@ function IMPUTE {
 	#${path_maf}/tmp/R${iname}_imputed.vcf \
 	#${path_maf}/tmp/covFiles/ 
 
-	bgzip -c ${path_maf}/tmp/${iname}_imputed.vcf > ${path_maf}/tmp/${iname}_imputed.vcf.gz
-	tabix -p vcf ${path_maf}/tmp/${iname}_imputed.vcf.gz
+ 	#### QUITAR LA HEADER LINE (#CHROM INFO FILTER...) QUE SE HA QUEDADO REPETIDA EN EL VCF TANTAS VECES COMO CHUNKS SE PROCESAN, Y SOLO QUIERO QUE SE QUEDE LA
+  	### PRIMERA VEZ, NO LAS DE DENTRO DEL VCF ASI QUE
+	# Remove duplicate headers del imputed vcf: (#CHROM INFO FILTER...) todas las veces que sale a lo largo del vcf menos la primera y luego comprimir
+	cat ${path_maf}/tmp/${iname}_imputed.vcf | awk "!/^#CHROM/ || !seen[\$0]++" | bgzip -c > ${path_maf}/tmp/${iname}_imputed.vcf.gz
+     	## Esta bgzip es la linea normal de comprimir el vcf pero si la uso estaria dejando las lineas del header repetidas a lo largo del vcf
+	#bgzip -c ${path_maf}/tmp/${iname}_imputed.vcf > ${path_maf}/tmp/${iname}_imputed.vcf.gz
 
+ 	### indice normal:
+ 	tabix -p vcf ${path_maf}/tmp/${iname}_imputed.vcf.gz
 	rm ${path_maf}/tmp/${iname}_imputed.vcf
 	
 }
