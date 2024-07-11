@@ -66,20 +66,20 @@ echo "MERGE"
 STARTTIME=$(date +%s)
 
 # BCFTOOLS da error si hay muchos vcfs. Para prevenir el error he puesto como máximo 500 vcfs para hacer vcfs intermedios.
-ls ${path_maf}/individual_vcf/new_vcf/*.vcf.gz ${path_maf}/individual_vcf/incorporated_vcf/*.vcf.gz | split -l 850 - "${path_maf}/tmp/subset_vcfs_"
+ls ${path_maf}/individual_vcf/new_vcf/*.vcf.gz ${path_maf}/individual_vcf/incorporated_vcf/*.vcf.gz | split -l 850 - "${path_maf}/tmp_p2/subset_vcfs_"
 
 function MERGED {
 
 	path_maf=${1}
 	iname="$(basename ${2})"
 
-	bcftools merge -l ${2} -O z -o ${path_maf}/tmp/merge.${iname}.vcf.gz
-	tabix -p vcf ${path_maf}/tmp/merge.${iname}.vcf.gz
+	bcftools merge -l ${2} -O z -o ${path_maf}/tmp_p2/merge.${iname}.vcf.gz
+	tabix -p vcf ${path_maf}/tmp_p2/merge.${iname}.vcf.gz
 
 } 
 
 export -f MERGED
-parallel "MERGED" ::: ${path_maf} ::: ${path_maf}/tmp/subset_vcfs_*
+parallel "MERGED" ::: ${path_maf} ::: ${path_maf}/tmp_p2/subset_vcfs_*
 
 #EDIT GUR: ESTA LINEA DE CODIGO ESTA JUNTANDO LOS VCFS QUE SE SEPARARON ANTES. GONZALO DECIA QUE SI HABIA MÁS DE 
 #500 VCFS HABIA QUE REPARTIRLOS EN TROZOS, O SEA: si hay 1500 vcfs en la carpeta new_vcf se HARIAN 3 MERGE: merge_aa, merge_bb, merge_cc y cada uno tendria 
@@ -95,16 +95,16 @@ parallel "MERGED" ::: ${path_maf} ::: ${path_maf}/tmp/subset_vcfs_*
 
 
 # Count the number of VCFs (merge_aa, merge_bb...)
-file_count=$(ls -1 "${path_maf}/tmp/merge."*.vcf.gz 2>/dev/null | wc -l)
+file_count=$(ls -1 "${path_maf}/tmp_p2/merge."*.vcf.gz 2>/dev/null | wc -l)
 if [ "$file_count" -gt 1 ]; then
     # HAY MÁS DE 1 VCF PARA MERGE: merge_aa, merge_bb.. ORIGINALMENTE: >500 VCF rn la carpeta
 	echo LINEA GONZALO 
-	bcftools merge -O z -o ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/merge.*.vcf.gz
+	bcftools merge -O z -o ${path_maf}/tmp_p2/merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/merge.*.vcf.gz
 
 else
     # solo hay 1 VCF (MERGE_AA), no hay que merge nada: originalmente <500 VCF en new_vcf
 	echo LINEA GRACIELA
-	cp ${path_maf}/tmp/merge.*.vcf.gz ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz
+	cp ${path_maf}/tmp_p2/merge.*.vcf.gz ${path_maf}/tmp_p2/merged_${date_paste}_tmp.vcf.gz
 fi
 
 #comment gonzalo
@@ -115,3 +115,5 @@ ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
+
+bcftools query -l ${path_maf}/tmp_p2/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp/subset_vcfs_merge_"
