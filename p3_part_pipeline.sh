@@ -99,7 +99,7 @@ file_count=$(ls -1 "${path_maf}/tmp_p2/merge."*.vcf.gz 2>/dev/null | wc -l)
 if [ "$file_count" -gt 1 ]; then
     # HAY MÁS DE 1 VCF PARA MERGE: merge_aa, merge_bb.. ORIGINALMENTE: >500 VCF rn la carpeta
 	echo LINEA GONZALO 
-	bcftools merge -O z -o ${path_maf}/tmp_p2/merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/merge.*.vcf.gz
+	bcftools merge -O z -o ${path_maf}/tmp_p2/merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp_p2/merge.*.vcf.gz
 
 else
     # solo hay 1 VCF (MERGE_AA), no hay que merge nada: originalmente <500 VCF en new_vcf
@@ -116,4 +116,28 @@ echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 
-bcftools query -l ${path_maf}/tmp_p2/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp/subset_vcfs_merge_"
+bcftools query -l ${path_maf}/tmp_p2/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp_p2/subset_vcfs_merge_"
+
+function IMPUTE { 
+	path_maf=${1}
+	date_paste=${2}
+	filename=${3}
+
+	iname="$(basename ${filename})"
+
+	# Sepration
+	bcftools view -S ${filename} --min-ac=0 -O z -o ${path_maf}/tmp_p2/${iname}_merged.vcf.gz ${path_maf}/tmp_p2/merged_${date_paste}_tmp.vcf.gz
+	tabix -p vcf ${path_maf}/tmp_p2/${iname}_merged.vcf.gz
+
+}
+
+export -f IMPUTE
+
+#echo BEFORE PARALLEL INPUT 
+
+parallel "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp_p2/subset_vcfs_merge_*
+#echo AFTER PARRALEL INPUT
+
+### GUR: commenta eveything de aqui para abajo. pARA COMENTAR QUITAR ALMOHADILLA
+
+#: '
