@@ -51,9 +51,7 @@ date_dir="date_2024_06_26"
 #mkdir "${path_maf}/tmp/covFiles/"
 #mkdir "${path_maf}/tmp/hail/"
 
-echo "INICIO:" >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo $(date) >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
+
 echo "INICIO:"
 echo $(date)
 
@@ -61,7 +59,6 @@ echo $(date)
 # Merge #
 #=======#
 
-echo "MERGE" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "MERGE"
 STARTTIME=$(date +%s)
 
@@ -112,8 +109,6 @@ fi
 
 
 ENDTIME=$(date +%s)
-echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 
 bcftools query -l ${path_maf}/tmp_p2/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp_p2/subset_vcfs_merge_"
