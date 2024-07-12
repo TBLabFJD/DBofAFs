@@ -741,15 +741,20 @@ tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz
 
 #######GUR: añadir lo del ID para que se creen bien las columnas de la base de datos 
 
-#1) SET ID COLUMN:
+cd ${path_maf}/db/${date_dir}
 
-bcftools annotate --set-id '%CHROM\_%POS\_%REF\_%FIRST_ALT' MAFdb_AN20_${date_paste}.vcf.gz > MAFdb_AN20_${date_paste}_ID.vcf.gz
+#1) SET ID COLUMN: y ademas crearle su .tbi INDEX
 
-# 2) COMPRIMIR BIEN EL NUEVO id.vcf.GZ y ademas crearle su .tbi INDEX)
-## nuevo GUR:
-mv MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
-bgzip -c ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf > ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
+bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o MAFdb_AN20_${date_paste}_ID.vcf.gz -O z MAFdb_AN20_${date_paste}.vcf.gz
 tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
+
+
+
+## antiguo GUR parte 2 mal:
+#bcftools annotate --set-id '%CHROM\_%POS\_%REF\_%FIRST_ALT' MAFdb_AN20_${date_paste}.vcf.gz > MAFdb_AN20_${date_paste}_ID.vcf.gz
+#mv MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
+#bgzip -c ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf > ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
+#tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
 #### antiguo GUR
 #mv MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
 #bcftools view -Oz -o MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
