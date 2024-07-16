@@ -563,7 +563,12 @@ geno=0.05
 maf=0.05
 
 plink --vcf imputed_${date_paste}_ID_tmp.vcf.gz --make-bed --out merged
-plink --bfile merged --make-bed --geno ${geno} --mind 1 --maf ${maf} --out merged_geno_maf
+##lineas nuevas: hay que filtrar primero las 4 y pico millones de variantes con el bed del CES de sofia, para que asi para hacer el prunning y tal ya se "centre" en filtrar las variantes del CES
+## esto lo hacemos asi porque el 95% de las muestras son CES y asi para sacar las relaciones del pi_hat y tal se hacen en base a las posiciones cubiertas que son las del CES de Sophia aprox
+## 
+plink --bfile merged --extract range /lustre/NodoBIO/bioinfo/fjd/beds/CES_v3_hg38_target.chr.formatted.sorted.annotated.bed --make-bed --out merged_filtered
+plink --bfile merged_filtered --make-bed --geno ${geno} --mind 1 --maf ${maf} --out merged_geno_maf
+## fin lineas nuevas
 plink --bfile merged_geno_maf --geno ${geno} --mind 1 --maf ${maf} --indep-pairwise 50 5 0.5
 plink --bfile merged_geno_maf --extract plink.prune.in --make-bed --out merged_geno_maf_prunned
 plink --bfile merged_geno_maf_prunned --genome --min 0.05 --out relationship_raw
