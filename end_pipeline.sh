@@ -44,7 +44,6 @@ task_dir="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks"
 #date_dir="date_${date_paste}"
 date_paste="2024_06_26"
 date_dir="date_2024_06_26"
-
 #==============================================#
 # Making the definitive merge and imputed vcfs #
 #==============================================#
@@ -73,14 +72,18 @@ else
 
  	### yo: cojo el "tmp_imputes.vcf" y el "tmp_merged.vcf y los limpio y los nombro como tmp_2_imputed.vcf y tmp_2_merged y asi luego puedo volver a limpiarlos,
   	#porque tendre que: 1) quitar los dup (dup1 y dup2 por ejemplo) de genotipo y 2) luego si se queda el dup3 renombrar todo para que se quite esa coletilla 
-	## 1) quitar columna genotipo para dup1 y dup2 segun muestras excluidas y cuardarlo en un imputed y merged tmp2
-	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/tmp/imputed_${date_paste}_tmp_2.vcf.gz
-	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/tmp/merged_${date_paste}_tmp_2.vcf.gz
-	
- 	### quitar coletilla de repeat3 a lo largo de todo el imputed y el merged que se ha quedado en el vcf temporal de merged y imputed
- 	bcftools view ${path_maf}/tmp/imputed_${date_paste}_tmp_2.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
-  	bcftools view ${path_maf}/tmp/merged_${date_paste}_tmp_2.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
- 
+	## 1) quitar columna genotipo para de las muestras excluidas y ademas quitar la coletilla de los duupp y tal
+	#bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/tmp/imputed_${date_paste}_tmp_2.vcf.gz
+	#bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/tmp/merged_${date_paste}_tmp_2.vcf.gz
+
+ 	### 2) quitar coletilla de repeat3 a lo largo de todo el imputed y el merged que se ha quedado en el vcf temporal de merged y imputed
+ 	#bcftools view ${path_maf}/tmp/imputed_${date_paste}_tmp_2.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
+  	#bcftools view ${path_maf}/tmp/merged_${date_paste}_tmp_2.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
+
+ 	#JUNTAR PUNTO 1 Y PUNTO 2: QUITAR COLUMNAS GENOTIPO DE MIS EXLCUIDOS Y QUITAR LA COLETILLA DEL REPEAT, SI HUBIERA COLUMNA DE DUOTAGGG HABRIA QUE QUITARLA TAMBIEN
+  	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/tmp/imputed_${date_paste}.vcf.gz
+	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/tmp/merged_${date_paste}.vcf.gz
+
   	#mover las excluidas a excluidas 
 	for i in $(cat ${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv);
 	do
