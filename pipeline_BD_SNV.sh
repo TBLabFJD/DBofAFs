@@ -642,8 +642,8 @@ else
   	#bcftools view ${path_maf}/tmp/merged_${date_paste}_tmp_2.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 
  	#JUNTAR PUNTO 1 Y PUNTO 2: QUITAR COLUMNAS GENOTIPO DE MIS EXLCUIDOS Y QUITAR LA COLETILLA DEL REPEAT, SI HUBIERA COLUMNA DE DUOTAGGG HABRIA QUE QUITARLA TAMBIEN
-  	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/tmp/imputed_${date_paste}.vcf.gz
-	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/tmp/merged_${date_paste}.vcf.gz
+  	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
+	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 
   	#mover las excluidas a excluidas 
 	for i in $(cat ${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv);
