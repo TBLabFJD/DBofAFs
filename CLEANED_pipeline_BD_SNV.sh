@@ -82,7 +82,7 @@ if [[ $(echo "$duplicates" | wc -l) -gt 0 ]]; then
 
     while IFS= read -r sample; do
     	files_vcf=($(find "${path_maf}/individual_vcf/new_vcf" -type f -name "${sample}*.vcf.gz"))
-	    files_bed=($(find "${path_maf}/coverage/new_bed" -type f -name "${sample}*.global.quantized.bed"))
+	files_bed=($(find "${path_maf}/coverage/new_bed" -type f -name "${sample}*.global.quantized.bed"))
         vcf_wgs_files=()
         vcf_wes_files=()
         vcf_ces_files=()
@@ -207,10 +207,10 @@ for vcffile in ${path_maf}/individual_vcf/new_vcf/repeat*.gz; do
 	filename=$(basename "${vcffile}")
  	# Extract the new pattern (repeatYXX-XXXX) from the filename
  	pattern_new=$(echo ${filename} | grep -oP 'repeat\d+-\d+')
-  # Extract the old pattern (XX-XXXX) from the filename
+  	# Extract the old pattern (XX-XXXX) from the filename
  	pattern_old=$(echo ${pattern_new:7})
-  rm ${vcffile}.tbi #remove old index
-  bcftools view ${vcffile} | sed "s/${pattern_old}/${pattern_new}/g" | bgzip -c > "${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz"
+  	rm ${vcffile}.tbi #remove old index
+  	bcftools view ${vcffile} | sed "s/${pattern_old}/${pattern_new}/g" | bgzip -c > "${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz"
 	tabix -p vcf ${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz
  	mv ${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz ${vcffile}
   mv ${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz.tbi ${vcffile}.tbi
@@ -358,13 +358,13 @@ function IMPUTE {
 
 	# Imputation
  	# GUR: head -n 5000 en vez de 500 porque el nuevo vcf del merged de todos los CES,WES,WGS tiene muchas mas lineas de ## en el vcf por todos los contigs y tal que dan su info de ID
-  ## o sea en total hay #3455 lineas de metadata tipo ##, si en algun momento resulta que hay mas entonces habria que cambiar el head -n y poner mas
+  	## o sea en total hay #3455 lineas de metadata tipo ##, si en algun momento resulta que hay mas entonces habria que cambiar el head -n y poner mas
  	skiprows=$(bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n 5000 | grep -n "#CHROM" | sed 's/:.*//')
 	numrows="$((${skiprows}-1))"
 	bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n ${numrows} > ${path_maf}/tmp/${iname}_imputed.vcf
 
 	#python ${task_dir}/imputeValues.py \
-  python /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks/sub_imputeValues.py \
+  	python /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks/sub_imputeValues.py \
 	--mergedvcf ${path_maf}/tmp/${iname}_merged.vcf.gz \
 	--skiprows ${skiprows} \
 	--imputedvcf ${path_maf}/tmp/${iname}_imputed.vcf \
@@ -377,13 +377,13 @@ function IMPUTE {
 	#${path_maf}/tmp/covFiles/ 
 
  	#### QUITAR LA HEADER LINE (#CHROM INFO FILTER...) QUE SE HA QUEDADO REPETIDA EN EL VCF TANTAS VECES COMO CHUNKS SE PROCESAN, Y SOLO QUIERO QUE SE QUEDE LA
-  ### PRIMERA VEZ, NO LAS DE DENTRO DEL VCF, OSEA COMO AHORA YO HAGO TODO POR CHUNKS ES DECIR PROCESO 1 MILLON DE VARIANTES, LAS PEGO 
-  # PROCESO OTRO MILLON, Y ASI 40 VECES ENTONCES LA LINEA DEL HEADER SE VA REPITIENDO Y HAY QUE QUITAR TODAS LAS QUE SE HAN IDO REPITIENDO
+  	### PRIMERA VEZ, NO LAS DE DENTRO DEL VCF, OSEA COMO AHORA YO HAGO TODO POR CHUNKS ES DECIR PROCESO 1 MILLON DE VARIANTES, LAS PEGO 
+  	# PROCESO OTRO MILLON, Y ASI 40 VECES ENTONCES LA LINEA DEL HEADER SE VA REPITIENDO Y HAY QUE QUITAR TODAS LAS QUE SE HAN IDO REPITIENDO
 	# Remove duplicate headers del imputed vcf: (#CHROM INFO FILTER...) todas las veces que sale a lo largo del vcf menos la primera y luego comprimir
 
 	cat ${path_maf}/tmp/${iname}_imputed.vcf | awk "!/^#CHROM/ || !seen[\$0]++" | bgzip -c > ${path_maf}/tmp/${iname}_imputed.vcf.gz
   
-  ## Esta bgzip es la linea normal de comprimir el vcf pero si la uso estaria dejando las lineas del header repetidas a lo largo del vcf
+  	## Esta bgzip es la linea normal de comprimir el vcf pero si la uso estaria dejando las lineas del header repetidas a lo largo del vcf
 	#bgzip -c ${path_maf}/tmp/${iname}_imputed.vcf > ${path_maf}/tmp/${iname}_imputed.vcf.gz
 
  	### indice normal:
