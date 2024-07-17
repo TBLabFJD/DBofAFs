@@ -531,6 +531,12 @@ else
 fi
 
 
+###GUR: crear un tabix para el merged.vcf (36gb) y para el imputed (46gb) porque son grandisimos y luego cuando tienen que quitar las muestras que se descartan
+## despues del plink por parentesto tarda mucho (probablemente con un indice iria mas rapido)
+tabix -p vcf ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz
+tabix -p vcf ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz
+
+
 
 SUBENDTIME=$(date +%s)
 echo "	Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
