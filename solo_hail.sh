@@ -51,22 +51,20 @@ date_dir="date_2024_06_26"
 #===================#
 
 
-tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
-
 echo "DATABASE CREATION" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 STARTTIME=$(date +%s)
 echo "DATABASE CREATION" 
 
-mkdir "${path_maf}/db/${date_dir}"
+mkdir "${path_maf}/db_2/${date_dir}"
 
-cd ${path_maf}/db/${date_dir}/
+cd ${path_maf}/db_2/${date_dir}/
 
 
 #python3 ${task_dir}/callMAF.py \
 #--multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
 #--pathology ${mymetadatapathology_uniq} \
-#--mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
-#--samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
+#--mafdb ${path_maf}/db_2/${date_dir}/MAFdb.tab \
+#--samplegroup ${path_maf}/db_2/${date_dir}/sampleGroup.txt 
 
 #NECESITO LA VERSION 0.2.120 de hail, hasta que en la uam no la actualicen la que hay en /lustre/local/miniconda/python-3.6/lib/python3.6/site-packages/hail-0.2.30.dist-info
 #cargo mi environment que tiene hail 0.2.120
@@ -75,40 +73,40 @@ source /home/graciela/anaconda3/bin/activate hail
 python3 ${task_dir}/supersub_callMAF.py \
 --multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
 --pathology ${mymetadatapathology_uniq} \
---mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
+--mafdb ${path_maf}/db_2/${date_dir}/MAFdb.tab \
 --tmpdir ${TMPDIR} \
---samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
+--samplegroup ${path_maf}/db_2/${date_dir}/sampleGroup.txt 
 
 source /home/graciela/anaconda3/bin/deactivate
 
 
 python ${task_dir}/changeFormat.py \
 --multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
---vcfout ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf \
---mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
---samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt
+--vcfout ${path_maf}/db_2/${date_dir}/MAFdb_AN20_${date_paste}.vcf \
+--mafdb ${path_maf}/db_2/${date_dir}/MAFdb.tab \
+--samplegroup ${path_maf}/db_2/${date_dir}/sampleGroup.txt
 
 
-bgzip -c ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf > ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
-tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
+bgzip -c ${path_maf}/db_2/${date_dir}/MAFdb_AN20_${date_paste}.vcf > ${path_maf}/db_2/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
+tabix -p vcf ${path_maf}/db_2/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
 
 
 #######GUR: añadir lo del ID para que se creen bien las columnas de la base de datos 
 
-cd ${path_maf}/db/${date_dir}
+cd ${path_maf}/db_2/${date_dir}
 
 #1) SET ID COLUMN: y ademas crearle su .tbi INDEX
 
 bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o MAFdb_AN20_${date_paste}_ID.vcf.gz -O z MAFdb_AN20_${date_paste}.vcf.gz
-tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
+tabix -p vcf ${path_maf}/db_2/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
 
 
 
 ## antiguo GUR parte 2 mal:
 #bcftools annotate --set-id '%CHROM\_%POS\_%REF\_%FIRST_ALT' MAFdb_AN20_${date_paste}.vcf.gz > MAFdb_AN20_${date_paste}_ID.vcf.gz
 #mv MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
-#bgzip -c ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf > ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
-#tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
+#bgzip -c ${path_maf}/db_2/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf > ${path_maf}/db_2/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
+#tabix -p vcf ${path_maf}/db_2/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
 #### antiguo GUR
 #mv MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
 #bcftools view -Oz -o MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
