@@ -80,7 +80,7 @@ else
 		mv ${path_maf}/individual_vcf/tmp.vcf.gz ${vcffile}
 	done
 
-  	### de mis repeat1, repeat2 de todos lados, quitarles la coletilla a todos (REPEAT1, REPEAT2... ETC)
+  	### de mis repeat1, repeat2 de todos lados, quitarles la coletilla a todos (REPEAT1, REPEAT2... ETC) DEL FILENAME
 	#no hay todavia incorporated, porque se mueven al final, ademas va a dar error en las que no tengan la coletilla
 	for file in ${path_maf}/individual_vcf/discarded_vcf_tmp/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
 	for file in ${path_maf}/individual_vcf/new_vcf/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
@@ -88,92 +88,11 @@ else
 	for file in ${path_maf}/coverage/new_bed/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
 
 fi
-tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
 
 ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" 
-
-
-
-
-
-#===================#
-# Database creation #
-#===================#
-
-echo "DATABASE CREATION" >> ${path_maf}/metadata/${date_dir}/logfile.txt
-STARTTIME=$(date +%s)
-echo "DATABASE CREATION" 
-
-mkdir "${path_maf}/db/${date_dir}"
-
-cd ${path_maf}/db/${date_dir}/
-
-
-#python3 ${task_dir}/callMAF.py \
-#--multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
-#--pathology ${mymetadatapathology_uniq} \
-#--mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
-#--samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
-
-#NECESITO LA VERSION 0.2.120 de hail, hasta que en la uam no la actualicen la que hay en /lustre/local/miniconda/python-3.6/lib/python3.6/site-packages/hail-0.2.30.dist-info
-#cargo mi environment que tiene hail 0.2.120
-source /home/graciela/anaconda3/bin/activate hail
-
-python3 ${task_dir}/supersub_callMAF.py \
---multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
---pathology ${mymetadatapathology_uniq} \
---mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
---tmpdir ${TMPDIR} \
---samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
-
-source /home/graciela/anaconda3/bin/deactivate
-
-
-python ${task_dir}/changeFormat.py \
---multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
---vcfout ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf \
---mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
---samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt
-
-
-bgzip -c ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf > ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
-tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
-
-
-#######GUR: añadir lo del ID para que se creen bien las columnas de la base de datos 
-
-cd ${path_maf}/db/${date_dir}
-
-#1) SET ID COLUMN: y ademas crearle su .tbi INDEX
-
-bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o MAFdb_AN20_${date_paste}_ID.vcf.gz -O z MAFdb_AN20_${date_paste}.vcf.gz
-tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
-
-
-
-## antiguo GUR parte 2 mal:
-#bcftools annotate --set-id '%CHROM\_%POS\_%REF\_%FIRST_ALT' MAFdb_AN20_${date_paste}.vcf.gz > MAFdb_AN20_${date_paste}_ID.vcf.gz
-#mv MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
-#bgzip -c ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf > ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
-#tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
-#### antiguo GUR
-#mv MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
-#bcftools view -Oz -o MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
-#htsfile MAFdb_AN20_${date_paste}_ID.vcf.gz
-##by default is .csi -> hay que poner opcion -t para que me del el .tbi
-#bcftools index -t MAFdb_AN20_${date_paste}_ID.vcf.gz 
-
-
-ENDTIME=$(date +%s)
-echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" 
-
-
-
 
 
 #========================================#
@@ -198,8 +117,8 @@ mv ${path_maf}/individual_vcf/new_vcf/* ${path_maf}/individual_vcf/incorporated_
 mv ${path_maf}/coverage/new_bed/* ${path_maf}/coverage/incorporated_bed/
 
 # Moving temporal discarded samples and removing folder
-mv ${path_maf}/individual_vcf/discarded_vcf_tmp/* ${path_maf}/individual_vcf/discarded_vcf/
-mv ${path_maf}/coverage/discarded_bed_tmp/* ${path_maf}/coverage/discarded_bed/
+#mv ${path_maf}/individual_vcf/discarded_vcf_tmp/* ${path_maf}/individual_vcf/discarded_vcf/
+#mv ${path_maf}/coverage/discarded_bed_tmp/* ${path_maf}/coverage/discarded_bed/
 #rm -r ${path_maf}/individual_vcf/discarded_vcf_tmp
 #rm -r ${path_maf}/coverage/discarded_bed_tmp
 
