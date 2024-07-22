@@ -229,7 +229,7 @@ for vcffile in ${path_maf}/individual_vcf/new_vcf/repeat*.gz; do
   	bcftools view ${vcffile} | sed "s/${pattern_old}/${pattern_new}/g" | bgzip -c > "${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz"
 	tabix -p vcf ${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz
  	mv ${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz ${vcffile}
-  mv ${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz.tbi ${vcffile}.tbi
+  	mv ${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz.tbi ${vcffile}.tbi
 done
 
 
@@ -536,13 +536,13 @@ then
 	mv ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz 
 else
 
- 	# QUITAR COLUMNA GENOTIPO DE MIS SAMLES EXLCUIDOS Y QUITAR LA COLETILLA DEL REPEAT, DE LAS MUESTRAS QUE SE QUEDAN
+ # QUITAR COLUMNA GENOTIPO DE MIS SAMLES EXLCUIDOS Y QUITAR LA COLETILLA DEL REPEAT, DE LAS MUESTRAS QUE SE QUEDAN
   #In summary, these commands are removing the genotype column de las muestras que excluimos y ademas LUEGO quitando la coletilla de: repeat1..., repeat2... que quedan en la columna del genotipo, debe ser un solo repeat por 
   # ADN lo que se deja dentro porque si no al quitar la coletilla habria 2 (ejemplo repeat100-000 y repeat200-000, si en exluidas no esta alguna de las dos entonces no se van a quitar ninguna y al quitar la coletilla quedaria la meustra repetida)
   # por eso es importante verificar que en excluidas esten todos -1 repeat de cada muestra que tiene repeats
 
   bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
-	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
+  bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 
   #mover VCFS DE muestras excluidas a carpeta de discarded (tanto su vcf como su bed) es una nueva carpeta llamada discarded_tmp, en la original estan los discarded al inicio 
 	for i in $(cat ${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv);
@@ -639,12 +639,19 @@ cd ${path_maf}/db/${date_dir}
 bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o MAFdb_AN20_${date_paste}_ID.vcf.gz -O z MAFdb_AN20_${date_paste}.vcf.gz
 tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
 
-#2) MERGED_LIMPIO: SET ID COLUMN: y ademas crearle su .tbi INDEX -> AL MERGED LIMPIO -> ESTO ES OPTATIVO PERO LO NECESITO PARA LAS QUERIES DE LA BASE DE DATOS
+## 2) HACER EL SPLIT DE MULTIALLELICAS A BIALELICAS, TABIX y luego HACERLE EL SAMPLE ID Y TABIX al vcf del ID -> se necesita para hacer bien las queries
+bcftools norm -m- ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z
+tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
 
-bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}_ID.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
-tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}_ID.vcf.gz
+bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
+tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz
 
-#3) IMPUTED_LIMPIO: SET ID COLUMN: y ademas crearle su .tbi INDEX -> AL IMPUTED LIMPIO -> OPTATIVO
+#3) MERGED_LIMPIO: SET ID COLUMN: y ademas crearle su .tbi INDEX -> AL MERGED LIMPIO -> ESTO ES OPTATIVO PERO LO NECESITO PARA LAS QUERIES DE LA BASE DE DATOS
+
+#bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}_ID.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
+#tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}_ID.vcf.gz
+
+#4) IMPUTED_LIMPIO: SET ID COLUMN: y ademas crearle su .tbi INDEX -> AL IMPUTED LIMPIO -> OPTATIVO MUY -> no se necesita para nada por ahora
 
 #bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}_ID.vcf.gz -O z ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
 #tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}_ID.vcf.gz
