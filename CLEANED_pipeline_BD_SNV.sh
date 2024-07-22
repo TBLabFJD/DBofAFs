@@ -6,7 +6,23 @@
 ### 2) ACTUALIZACION BASE DE DATOS: SI SE ESTAN CREANDO SUCESIVAS BASES DE DATOS A PARTIR DE UNA QUE YA HABIA:  mover los vcfs de incorporated_vcf a new_vcf y los incorporated_bed a new_bed y juntarlos con los nuevos que estemos metiendo
 ## EL PUNTO 2 LO HACEMOS ASI PORQUE LA PROPIA BASE DE DATOS YA TIENE UNA FUNCION PARA PRIORIZAR CES<WES<WGS y manda los que no son a discarded y los repetidos los gestiona poniendo las coletillas
 ## entonces si en la base de datos previa habia un CES y ahora meto el WES de la misma muestra, estan todos en new_vcf y ya para la actualziacion se manda el CES a discarded y ya se queda el WES
-## que hacer lo que se hace es: coger todo lo que hay 
+## que hacer lo que se hace es: coger todo lo que hay c
+
+#### PUNTOS IMPORTANTES A TENER EN CUENTA PARA LA ACTUALIZACION DE LA BASE DE DATOS:
+#1) Si cambio el filename de un vcf (ejemplo: impact_2644.vcf.gz -> 25-2525.vcf.gz) hay que cambiar el nombre tambien DENTRO del vcf, es decir, la columna del genotipo. 
+#Hay que pasar de tener #CHROM ID REF ALT QUAL FILTER impact_2644 -> #CHROM ID REF ALT QUAL FILTER 25-2525 -> esto no se hace de forma automatica, hay que cambiarlo a mano:
+#Para ello hay que abrir el vcf, editarlo y volverlo a comprimir -> /home/proyectos/bioinfo/graciela/cosas_TODO_DBofAFs/modificar_vcfs_rename_y_column_genotype/
+#2) coger SOLO lo de incorporated y volverlo a meter en new 
+#3) comprobar que despues de lo de priorizar WGS>WES>CES se hayan quedado bien los nombres  de los archivos con los repeats (habia algunos BED que no se habian renombrado junto a sus vcfs (los de los repeats)
+#por ejemplo el bed tenia repeat1 y el vcf no se le habia añadido pues lo tengo que añadir a mano -> el vcf si hay que hacer el cambio y no se ha editado dentro hay que hacer lo mismo que en el punto 1
+#4) revisar la metadata justo antes de la base de datos (MAFdb) y comprobar que los que se quedan despues del plink estan todos en el excel de la metadata (esto me fallo en su momento
+#porque habia una muestra que era 19-0065b y se habia quitado la 19-0065 y la b no estaba en la metadata. Si no tambien podria haber renombrado esta "b" como 19-0065 tal cual y solo se habria renombvrado el repeat 
+#con la base de datos sola, lo unico importante es que las fechas tienen que ser diferentes (las de la coletilla de los filenames)
+#5) ASEGURARSE QUE MACHEAN LAS FECHAS DEL BED CON SU VCF CORRESPONDIENTE!!!
+#6) los imputed hay que hacerlos en dos tandas porque no hay almacenamiento suficiente para correr los 26 o mas trozos de golpe
+#7) reorganizar la pipeline para que se haga el merged y el imputed y luego la base de datos y por ultimo corregir los archivos de los repeats de quitarles la coletilla
+# a sus vcfs en el filename, dentro y en el bed 
+
 
 module load bedtools
 module load miniconda/3.6
