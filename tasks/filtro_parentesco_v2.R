@@ -26,6 +26,10 @@ df_stad$COVERED = df_stad$N_GENO - df_stad$N_MISS
 df_35 = df_relation[df_relation$PI_HAT > 0.35,]
 df_35_copy = df_35
 
+# GUR: Remover filas que tienen todos los valores como NA (habia 3/403 filas con todo NA)
+df_35 <- df_35[!apply(df_35, 1, function(x) all(is.na(x))), ]
+df_35_copy = df_35
+
 
 df_out = data.frame(stringsAsFactors = FALSE)
 contador = 1

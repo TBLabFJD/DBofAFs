@@ -1,4 +1,27 @@
+
 #!/bin/bash
+
+################################### PIPELINE DEFINITIVA PARA CREAR LA BASE DE DATOS DESDE 0 o ACTUALIZARLA. ESTA BASE DE DATOS SE CREA A PARTIR DE LOS VCFS EN LA CARPETA DE NEW_VCF. 
+### 1) NUEVA BASE DE DATOS: SI SE ESTA CREANDO LA PRIMERA BASE DE DATOS: directamente poner todos los vcfs en new_vcf y los mosdepth en new_bed
+### 2) ACTUALIZACION BASE DE DATOS: SI SE ESTAN CREANDO SUCESIVAS BASES DE DATOS A PARTIR DE UNA QUE YA HABIA:  mover los vcfs de incorporated_vcf a new_vcf y los incorporated_bed a new_bed y juntarlos con los nuevos que estemos metiendo
+## EL PUNTO 2 LO HACEMOS ASI PORQUE LA PROPIA BASE DE DATOS YA TIENE UNA FUNCION PARA PRIORIZAR CES<WES<WGS y manda los que no son a discarded y los repetidos los gestiona poniendo las coletillas
+## entonces si en la base de datos previa habia un CES y ahora meto el WES de la misma muestra, estan todos en new_vcf y ya para la actualziacion se manda el CES a discarded y ya se queda el WES
+## que hacer lo que se hace es: coger todo lo que hay c
+
+#### PUNTOS IMPORTANTES A TENER EN CUENTA PARA LA ACTUALIZACION DE LA BASE DE DATOS:
+#1) Si cambio el filename de un vcf (ejemplo: impact_2644.vcf.gz -> 25-2525.vcf.gz) hay que cambiar el nombre tambien DENTRO del vcf, es decir, la columna del genotipo. 
+#Hay que pasar de tener #CHROM ID REF ALT QUAL FILTER impact_2644 -> #CHROM ID REF ALT QUAL FILTER 25-2525 -> esto no se hace de forma automatica, hay que cambiarlo a mano:
+#Para ello hay que abrir el vcf, editarlo y volverlo a comprimir -> /home/proyectos/bioinfo/graciela/cosas_TODO_DBofAFs/modificar_vcfs_rename_y_column_genotype/
+#2) coger SOLO lo de incorporated y volverlo a meter en new 
+#3) comprobar que despues de lo de priorizar WGS>WES>CES se hayan quedado bien los nombres  de los archivos con los repeats (habia algunos BED que no se habian renombrado junto a sus vcfs (los de los repeats)
+#por ejemplo el bed tenia repeat1 y el vcf no se le habia añadido pues lo tengo que añadir a mano -> el vcf si hay que hacer el cambio y no se ha editado dentro hay que hacer lo mismo que en el punto 1
+#4) revisar la metadata justo antes de la base de datos (MAFdb) y comprobar que los que se quedan despues del plink estan todos en el excel de la metadata (esto me fallo en su momento
+#porque habia una muestra que era 19-0065b y se habia quitado la 19-0065 y la b no estaba en la metadata. Si no tambien podria haber renombrado esta "b" como 19-0065 tal cual y solo se habria renombvrado el repeat 
+#con la base de datos sola, lo unico importante es que las fechas tienen que ser diferentes (las de la coletilla de los filenames)
+#5) ASEGURARSE QUE MACHEAN LAS FECHAS DEL BED CON SU VCF CORRESPONDIENTE!!!
+#6) los imputed hay que hacerlos en dos tandas porque no hay almacenamiento suficiente para correr los 26 o mas trozos de golpe
+#7) reorganizar la pipeline para que se haga el merged y el imputed y luego la base de datos y por ultimo corregir los archivos de los repeats de quitarles la coletilla
+# a sus vcfs en el filename, dentro y en el bed 
 
 
 module load bedtools
@@ -8,42 +31,34 @@ module load plink
 module load R/R
 source ~/.Renviron
 #no se encontraba el libcrypto.so.1.0.0 que necesitaba el bcftools, asi que con esta linea le digo que busque en /lib64
+#en realidad esto no era el problema, el problema es que si en el nodo login (1,2,3) de la UAM hago module load bcftools y luego no hago module purge bcftools cuando mando trbajos al nodo de calculo
+# no se encuentra la libreria, asi que nunca hacer module load nada en el nodo login (tampoco se puede hacer porque es ilegal pero bueno...)
+
 export LD_LIBRARY_PATH=/lib64:$LD_LIBRARY_PATH
 module load bcftools
 
-#path antiguo gonzalo
-#export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.322.b06-1.el7_9.x86_64/jre/bin/:$PATH
-
-#path graciela: este era el path antiguo a java 8 que habia en marzo de 2024
-#export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.402.b06-2.el8.x86_64/jre/bin/:$PATH
-
 #path graciela java 8: nuevo path -> actualizado el 20 abril 2024
+## IMPORTANTE: verificar que el java 8 sea este path, porque en la UAM lo actualizan cada x meses y este path hay que ir cambiandolo
 export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.412.b08-2.el8.x86_64/jre/bin:$PATH
 
-# A VER SI CONSIGO MODIFICAR EL TMP DIR DE JAVA DE UNA VEZ
+# A VER SI CONSIGO MODIFICAR EL TMP DIR DE JAVA DE UNA VEZ -> necesario porque el /tmp/ de la UAM esta petado y hay que redirigir el tmp al tmp del nodo de calculo haciendo export TMPDIR y tal al nodo de calculo
 export JAVA_OPTS="-Djava.io.tmpdir=${TMPDIR}"
 
 ##### GUR: hay que rellenar los paths de donde tenemos las cosas
-## el data base path es TODA la carpeta donde esta db, vcfs, metadata...
-
+## el data base path es TODA la carpeta donde esta db, vcfs, metadata... SIN BARRA AL FINAL
 # Data base path
-path_maf="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs"
-#path_maf="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/p2_PRUEBAS_DBofAFs"
+path_maf=""
+#path_maf="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs"
 
-# TSV file with sample-pathology information
-#mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/pru_metadata.tsv" # el normal
-#mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/doble_metadata.tsv" #1 cat y 1 subcat
-#mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/cat_sub_cat.tsv" #varias cat y varias subcat
-mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/all_FJD.txt" #varias cat y varias subcat TODOS CES Y WGS Y WES
-#mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/p2_PRUEBAS_DBofAFs/metadata/all_FJD.txt" #varias cat y varias subcat TODOS CES Y WGS Y WES
+# TSV file with sample-pathology information: ANTES SE PONIAN TSVs ahora yo pongo archivos de texto .txt
+#mymetadatapathology_uniq="" # el normal
+#mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/all_FJD.txt" #varias cat y varias subcat TODOS CES Y WGS Y WES
 
-# Task directory
+# Task directory del github
 task_dir="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks"
 
 date_paste="$(date +"%Y_%m_%d")"
 date_dir="date_${date_paste}"
-
-
 
 mkdir "${path_maf}/metadata/${date_dir}"
 mkdir "${path_maf}/tmp"
@@ -66,48 +81,7 @@ echo "FIRST FAMILY FILTER" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 STARTTIME=$(date +%s)
 echo "FIRST FAMILY FILTER"
 
-###################################### ORIGINAL GONZALO ####################################################
-#list sample names, con bcftools o que hace es extraer el samplename up to first point (lo extrae de DENTRO del VCF, o sea si yo renombre el archivo se guarda con el nombre original del vcf)
-#por ejemplo: si una muestra de impact la renombre al sample id y utilizo este comando entonces me va a poner en la lista el nombre en base al id de impact, no al nuevo -> no usar esta función
-#original gonzalo
-#for vcf in ${path_maf}/individual_vcf/incorporated_vcf/*.vcf.gz; do bcftools query -l ${vcf} >> ${path_maf}/metadata/${date_dir}/multisample.tsv ; done
-#for vcf in ${path_maf}/individual_vcf/new_vcf/*.vcf.gz; do bcftools query -l ${vcf} >> ${path_maf}/metadata/${date_dir}/indivsample.tsv ; done
-#for vcf in *.vcf.gz; do bcftools query -l ${vcf} >> indivsample.tsv ; done
-
-# Exit pipeline if there are duplicate samples in the within the batch of samples that are going to be newly added 
-#GUR: si en la lista de los nuevos samples que va a anadir estan los IDs repetidos de las muestras te dice que filtres manualmente y los quites de la carpeta new
-#if [[ $(sort "${path_maf}/metadata/${date_dir}/indivsample.tsv" | uniq -d | wc -l) > 0 ]]
-#then
-	#echo "Duplicate samples in batch:"
-	#sort ${path_maf}/metadata/${date_dir}/indivsample.tsv | uniq -d
-	#echo "Please, manualy filter these duplicated samples."
-	#echo "Exit"
-	#exit 1
-#fi
-
-# ESTE CODIGO LO QUE HACE ES: meter el indivsample.tsv (lista de samples IDS NUEVOS que voy a añadir) y lista de los ya incorporados (multisample.tsv) en mi caso
-#no porque creo la base de datos de 0
-# lo que hace es generar un archivo: avoid_samples.tsv que te indica los sample IDs NUEVOS que son de la misma familia de alguien que habia previamente en la base de datos
-#y luego te crea dup_samples.tsv que es una lista de sample IDs que estas intentando meter que ya estaban previamente en la base de datos (en incorporated)
-# EN MI CASO ESTO NO SIRVE PARA NADA PORQUE NO HABIA NADIE INCORPORADO PREVIAMENTE (todo new) -> en una futura actualizacion habra que ver para meter este codigo como "actualziacion base de datos"
-#python ${task_dir}/avoid_family.py \
-#--multivcf ${path_maf}/metadata/${date_dir}/multisample.tsv \
-#--singlevcf ${path_maf}/metadata/${date_dir}/indivsample.tsv \
-#--family ${mymetadatapathology_uniq} \
-#--output ${path_maf}/metadata/${date_dir}/avoid_samples.tsv \
-#--dupout ${path_maf}/metadata/${date_dir}/dup_samples.tsv
-
-# los avoid_samples.tsv (esos sample IDs nuevos que son de la misma familia de alguien que habia previamente en la bd) lleva su vcf y su bed a discarded 
-# NO ME PASA A MI EN NINGUN MOMENTO PORQUE CREO LA BASE DE DATOS DE 0
-
-# Moving individual vcf and bed files from related samples to the discarded folders
-#for i in $(cat ${path_maf}/metadata/${date_dir}/avoid_samples.tsv);
-#do
-	#mv ${path_maf}/individual_vcf/new_vcf/${i}* ${path_maf}/individual_vcf/discarded_vcf/
-	#mv ${path_maf}/coverage/new_bed/${i}* ${path_maf}/coverage/discarded_bed/
-#done
-###################################### fin ORIGINAL GONZALO ####################################################
-
+### 1) todos los vcfs en new_vcf (los nuevos y/o los incorporados que habia antes que hay que moverlos a new_vcf)
 
 # Iterate over all vcf.gz files in the specified directory
 for vcf in ${path_maf}/individual_vcf/new_vcf/*.vcf.gz; do
@@ -115,13 +89,8 @@ for vcf in ${path_maf}/individual_vcf/new_vcf/*.vcf.gz; do
         echo "$file_name" >> ${path_maf}/metadata/${date_dir}/original_indivsample.tsv
 done
 
-### esto no me pasa porque creo la base de datos de 0 -> para el futuro actualizar base de datos
-#for vcf in ${path_maf}/individual_vcf/incorporated_vcf/*.vcf.gz; do
-        #file_name=$(basename "$vcf" | cut -d '.' -f1)
-        #echo "$file_name" >> ${path_maf}/metadata/${date_dir}/multisample.tsv
-#done
-
-###### mirar cuantos CES, WES y WGS hay de cada ADN-> priorizar CES over WES y WES over WGS -> mandar a discarded las que no se usan y quedarnos con todas las files del mismo tipo priorizado: si 2 CES me quedo 2 CES, si 2 CES y 1 WGS me quedo 1 WGS etc
+### 2) mirar cuantos CES, WES y WGS hay de cada ADN-> priorizar CES over WES y WES over WGS -> mandar a discarded las que no se usan y quedarnos con todas las files del mismo tipo priorizado: si 2 CES me quedo 2 CES, si 2 CES y 1 WGS me quedo 1 WGS etc
+## Esto se hace para los ADNs duplicados que tengan muestras con varios tipo de secuenciacion. Ejemplo: Si el mismo ADN tiene WES y CES manda su CES a discarded, si WGS y WES manda su WES a discarded. Si 2 del mismo tipo las deja dentro juntas en new
 duplicates=$(sort "${path_maf}/metadata/${date_dir}/original_indivsample.tsv" | uniq -d)
 if [[ $(echo "$duplicates" | wc -l) -gt 0 ]]; then
     echo "Duplicate samples in batch:"
@@ -186,19 +155,18 @@ if [[ $(echo "$duplicates" | wc -l) -gt 0 ]]; then
     done <<< "$duplicates"
 fi
 
-############### fin quedarnos con las muestras de un mismo tipo y tantas como se hayan secuenciado ###############
 
-###otra vez extraer lista de los sample IDS de los que se han quedado despues de quitar CES y tal
+###3) Otra vez extraer lista de los sample IDS de los que se han quedado despues de quitar CES<WES<WGS -> es decir pasamos de orig_indiv_sample.tsv a indivsample.tsv
 # Iterate over all vcf.gz files in the specified directory
 for vcf in ${path_maf}/individual_vcf/new_vcf/*.vcf.gz; do
         file_name=$(basename "$vcf" | cut -d '.' -f1)
         echo "$file_name" >> ${path_maf}/metadata/${date_dir}/indivsample.tsv
 done
 
-#lista de IDs unicos de muestras duplicadas
+#4) lista de IDs unicos de muestras duplicadas que se han quedado despues de mandar a discarded las que no tocaban (aqui se queda rollo: 2 o mas WES de la misma muestra, 2 WGS o mas WES de la misma muestra o 2 CES o mas WES de la misma muestra
 sort "${path_maf}/metadata/${date_dir}/indivsample.tsv" | uniq -d > ${path_maf}/metadata/${date_dir}/dup_samples.tsv
 
-########### AHORA DE LAS QUE QUEDAN AÑADIRLES LA COLETILLA DE DUP1 DUP2 ETC: NOW PROCESS BOTH THE BED AND THE VCF+TBI
+## 5) AHORA DE LAS QUE QUEDAN AÑADIRLES LA COLETILLA DE repeat1, repeat2 tanto a los vcfs como a los beds
 dup_file="${path_maf}/metadata/${date_dir}/dup_samples.tsv"
 
 # Function to rename files
@@ -246,7 +214,8 @@ while IFS= read -r sample; do
     rename_files "$sample" 1
 done < "$dup_file"
 
-###### ahora YA SE HAN QUEDADO  los duplicate samples renombrados tal que así: repeat119-0986.hg38.gatk.CES.v41.20240315.vcf.gz repeat219-0986.hg38.gatk.CES.v41.20240315.vcf.gz y así estan controlados y tambien sus correspondientes BEDs
+###### ahora YA SE HAN QUEDADO  los duplicate samples renombrados tal que así (tantos los vcfs como los beds): repeat119-0986.hg38.gatk.CES.v41.20240315.vcf.gz repeat219-0986.hg38.gatk.CES.v41.20240315.vcf.gz y así estan controlados y tambien sus correspondientes BEDs
+### 6) dentro de los vcs de los que se han renombrado hay que editar la columna de #CRHOM POS REF ALT 00-0000 -> #CRHOM POS REF ALT repeat100-0000 (el nombre de la columna del genotipo)
 # tras dejarlos renombrados con repeat1XX-XXXX.vcf.gz, repeat2XX-XXX.vcf.gz hay que ABRIR los vcfs y 
 #renombrar todas las veces que aparezca el sample name XX-XXXX y cambairlo por repeatYXX-XXX
 for vcffile in ${path_maf}/individual_vcf/new_vcf/repeat*.gz; do
@@ -257,55 +226,11 @@ for vcffile in ${path_maf}/individual_vcf/new_vcf/repeat*.gz; do
   	# Extract the old pattern (XX-XXXX) from the filename
  	pattern_old=$(echo ${pattern_new:7})
   	rm ${vcffile}.tbi #remove old index
-   	bcftools view ${vcffile} | sed "s/${pattern_old}/${pattern_new}/g" | bgzip -c > "${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz"
+  	bcftools view ${vcffile} | sed "s/${pattern_old}/${pattern_new}/g" | bgzip -c > "${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz"
 	tabix -p vcf ${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz
  	mv ${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz ${vcffile}
   	mv ${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz.tbi ${vcffile}.tbi
 done
-
-
-
-#for vcffile in /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/nombres_vcfs/repeat*.gz; do
- 	#dir=$(dirname "${vcffile}")
-	#filename=$(basename "${vcffile}")
- 	# Extract the new pattern (repeatYXX-XXXX) from the filename
- 	#pattern_new=$(echo ${filename} | grep -oP 'repeat\d+-\d+')
-  	# Extract the old pattern (XX-XXXX) from the filename
- 	#pattern_old=$(echo ${pattern_new:7})
-  	#rm ${vcffile}.tbi #remove old index
-	#bcftools view ${vcffile} | sed "s/${pattern_old}/${pattern_new}/g" | bgzip -c > "/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/nombres_vcfs/tmp.vcf.gz"
-	#tabix -p vcf /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/nombres_vcfs/tmp.vcf.gz
- 	#mv /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/nombres_vcfs/tmp.vcf.gz ${vcffile}
-  	#mv /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/nombres_vcfs/tmp.vcf.gz.tbi ${vcffile}.tbi
-#done
-
-
-################### ESTE CODIGO ES SOLO PARA CUANDO YA HABIA INCORPORATED VCFS
-
-# Rename duplicate samples (las de incorporated se quedan igual y las del new se renombran con la coletilla) este codigo solo vale para una vez ya se habia creado la base de datos
-
-#mkdir ${path_maf}/individual_vcf/tmp_vcf/
-#cd ${path_maf}/individual_vcf/new_vcf/
-#for i in $(cat ${path_maf}/metadata/${date_dir}/dup_samples.tsv);
-#do
-	#vcffile="$(ls ${i}*gz)"
-	#tbifile="$(ls ${i}*tbi)"
-
-	#mv ${vcffile} ${tbifile} ../tmp_vcf/
-
-	#bcftools view ../tmp_vcf/${vcffile} | sed "s/${i}/dUpTaGgG${i}/g" | bgzip -c > dUpTaGgG${vcffile}
-	#tabix -p vcf dUpTaGgG${vcffile}
-
-#done
-
-#cd ${path_maf}/coverage/new_bed/
-#for i in $(cat ${path_maf}/metadata/${date_dir}/dup_samples.tsv);
-#do
-	#bedfile="$(ls ${i}*bed)"
-	#mv ${bedfile} dUpTaGgG${bedfile}
-#done
-
-######################################################################################################################################################
 
 
 ENDTIME=$(date +%s)
@@ -322,7 +247,9 @@ echo "MERGE"
 STARTTIME=$(date +%s)
 
 # BCFTOOLS da error si hay muchos vcfs. Para prevenir el error he puesto como máximo 500 vcfs para hacer vcfs intermedios.
-ls ${path_maf}/individual_vcf/new_vcf/*.vcf.gz ${path_maf}/individual_vcf/incorporated_vcf/*.vcf.gz | split -l 850 - "${path_maf}/tmp/subset_vcfs_"
+# aqui normalmente se hacia ls de lo vcfs de new_vcd y de incorporated_vcf y ya se empezaba a hacer el merged de todos ellos
+# pero eso ya no es necesario porque tanto los vcfs de incorporated como de new estan en la carpeta de new 
+ls ${path_maf}/individual_vcf/new_vcf/*.vcf.gz | split -l 850 - "${path_maf}/tmp/subset_vcfs_"
 
 function MERGED {
 
@@ -343,29 +270,18 @@ parallel "MERGED" ::: ${path_maf} ::: ${path_maf}/tmp/subset_vcfs_*
 #PROBLEMA: si hay menos de 500 VCFs en el new_vcf solo hay 1 VCF: merge_aa, entonces esta linea de abajo da error porque no 
 #esta haciendo merge de varios VCFs, ya que solo hay 1. Y por eso da el error de que no puede hacer merge
 
-#linea original GONZALO
-#bcftools merge -O z -o ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/merge.*.vcf.gz
-
-#GUR EDIT: cp el merge original (merge_aa) en uno nuevo que se llame como lo del date_paste
-#cp ${path_maf}/tmp/merge.*.vcf.gz ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz
-
-
 # Count the number of VCFs (merge_aa, merge_bb...)
 file_count=$(ls -1 "${path_maf}/tmp/merge."*.vcf.gz 2>/dev/null | wc -l)
 if [ "$file_count" -gt 1 ]; then
-    # HAY MÁS DE 1 VCF PARA MERGE: merge_aa, merge_bb.. ORIGINALMENTE: >500 VCF rn la carpeta
+  # HAY MÁS DE 1 VCF PARA MERGE: merge_aa, merge_bb.. ORIGINALMENTE: >500 VCF rn la carpeta
 	echo LINEA GONZALO 
 	bcftools merge -O z -o ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/merge.*.vcf.gz
 
 else
-    # solo hay 1 VCF (MERGE_AA), no hay que merge nada: originalmente <500 VCF en new_vcf
+  # solo hay 1 VCF (MERGE_AA), no hay que merge nada: originalmente <500 VCF en new_vcf
 	echo LINEA GRACIELA
 	cp ${path_maf}/tmp/merge.*.vcf.gz ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz
 fi
-
-#comment gonzalo
-#######if [[ $(ls ${path_maf}/individual_vcf/new_vcf/*.vcf.gz | wc -l) -gt 850 ]]
-
 
 ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
@@ -379,8 +295,6 @@ echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 echo "IMPUTATION" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 STARTTIME=$(date +%s)
 echo "IMPUTATION"
-
-
 
 # Making a bedfile from the merged vcf so that bedtools will work faster (40 min per sample to 2 sec per sample)
 echo "	Making bed file" >> ${path_maf}/metadata/${date_dir}/logfile.txt
@@ -459,17 +373,14 @@ function IMPUTE {
 	tabix -p vcf ${path_maf}/tmp/${iname}_merged.vcf.gz
 
 	# Imputation
- 	#head -n 5000 en vez de 500 porque el nuevo vcf del merged de todos los cES,WES,WGS tiene muchas mas lineas de ## en el vcf por todos los contigs y tal que dan su info de ID
-
- 	######### OJO GUR: TENGO QUE ARREGLAR ESTE CODIGO, PORQUE AHORA SE PASA EL IMPUTED SOLO CON LAS METADATA LINES (SKIPROWS=INCLUYENDO LA HEADERER LINEE) PERO LUEGO LE PASO NUMROWS QUE ES SOLO 
-  	### LAS METADATA LINES SIN LA LINEA DE LAS MUESTRAS, Y LUEGO SE PEGA ESTA LINEA DENTRO DEL sub_imputeValues.py, LO UNICO ES QUE COMO AHORA YO HAGO TODO POR CHUNKS
-   	## ES DECIR PROCESO 1 MILLON DE VARIANTES, LAS PEGO, PROCESO OTRO MILLON, Y ASI 40 VECES ENTONCES LA LINEA DEL HEADER SE VA REPITIENDO Y HAY QUE QUITARLA EN ALGUN MOMENTO
+ 	# GUR: head -n 5000 en vez de 500 porque el nuevo vcf del merged de todos los CES,WES,WGS tiene muchas mas lineas de ## en el vcf por todos los contigs y tal que dan su info de ID
+  	## o sea en total hay #3455 lineas de metadata tipo ##, si en algun momento resulta que hay mas entonces habria que cambiar el head -n y poner mas
  	skiprows=$(bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n 5000 | grep -n "#CHROM" | sed 's/:.*//')
 	numrows="$((${skiprows}-1))"
 	bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n ${numrows} > ${path_maf}/tmp/${iname}_imputed.vcf
 
 	#python ${task_dir}/imputeValues.py \
-        python /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks/sub_imputeValues.py \
+  	python /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks/sub_imputeValues.py \
 	--mergedvcf ${path_maf}/tmp/${iname}_merged.vcf.gz \
 	--skiprows ${skiprows} \
 	--imputedvcf ${path_maf}/tmp/${iname}_imputed.vcf \
@@ -482,10 +393,13 @@ function IMPUTE {
 	#${path_maf}/tmp/covFiles/ 
 
  	#### QUITAR LA HEADER LINE (#CHROM INFO FILTER...) QUE SE HA QUEDADO REPETIDA EN EL VCF TANTAS VECES COMO CHUNKS SE PROCESAN, Y SOLO QUIERO QUE SE QUEDE LA
-  	### PRIMERA VEZ, NO LAS DE DENTRO DEL VCF ASI QUE
+  	### PRIMERA VEZ, NO LAS DE DENTRO DEL VCF, OSEA COMO AHORA YO HAGO TODO POR CHUNKS ES DECIR PROCESO 1 MILLON DE VARIANTES, LAS PEGO 
+  	# PROCESO OTRO MILLON, Y ASI 40 VECES ENTONCES LA LINEA DEL HEADER SE VA REPITIENDO Y HAY QUE QUITAR TODAS LAS QUE SE HAN IDO REPITIENDO
 	# Remove duplicate headers del imputed vcf: (#CHROM INFO FILTER...) todas las veces que sale a lo largo del vcf menos la primera y luego comprimir
+
 	cat ${path_maf}/tmp/${iname}_imputed.vcf | awk "!/^#CHROM/ || !seen[\$0]++" | bgzip -c > ${path_maf}/tmp/${iname}_imputed.vcf.gz
-     	## Esta bgzip es la linea normal de comprimir el vcf pero si la uso estaria dejando las lineas del header repetidas a lo largo del vcf
+  
+  	## Esta bgzip es la linea normal de comprimir el vcf pero si la uso estaria dejando las lineas del header repetidas a lo largo del vcf
 	#bgzip -c ${path_maf}/tmp/${iname}_imputed.vcf > ${path_maf}/tmp/${iname}_imputed.vcf.gz
 
  	### indice normal:
@@ -497,8 +411,8 @@ function IMPUTE {
 export -f IMPUTE
 
 echo BEFORE PARALLEL INPUT 
-## esto hay que hacerlo de 10 en 10 para que se borren los imputed sin comprimir porque cada uno son 220gb aprox y habria que tener 2,2 TB de espacio simultaneamente de almacenamiento
-## si queremos correr los 26 troxos de golpe habria que tener 6TB de almacenamiento disponibles 
+## esto hay que hacerlo de 10 en 10 para que se borren los imputed.vcf sin comprimir porque cada uno son 220gb aprox y habria que tener 2,2 TB de espacio simultaneamente de almacenamiento
+## si queremos correr los 26 trozos de golpe habria que tener 6TB de almacenamiento disponibles, mejor de 10 en 10 simulataneo 
 parallel -j 10 "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
 #parallel "IMPUTE" ::: ${path_maf} ::: ${date_paste} ::: ${path_maf}/tmp/subset_vcfs_merge_*
 echo AFTER PARRALEL INPUT
@@ -601,10 +515,6 @@ echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" 
 
 
-
-
-
-
 #==============================================#
 # Making the definitive merge and imputed vcfs #
 #==============================================#
@@ -625,27 +535,16 @@ then
 	mv ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz 
 	mv ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz 
 else
-	##### gonzalo, coge el "tmp_imputes.vcf" y el "tmp_merged.vcf" quita las muestras excluidas y lo llama como el definitivo y lo mueve a otro lado
-	# Removing samples from merged and imputed vcf, ES DECIR QUITAR EN MI CASO LAS REPEAT1, REPEAT2 ETC QUE NO QUIERA (LAS COLUMNAS DEL GENOTIPO)
- 	#In summary, these commands are filtering the input VCF files based on certain criteria, removing the string "dUpTaGgG" from each line, and saving the modified VCF files with new filenames.
-	#bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
-	#bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 
- 	### yo: cojo el "tmp_imputes.vcf" y el "tmp_merged.vcf y los limpio y los nombro como tmp_2_imputed.vcf y tmp_2_merged y asi luego puedo volver a limpiarlos,
-  	#porque tendre que: 1) quitar los dup (dup1 y dup2 por ejemplo) de genotipo y 2) luego si se queda el dup3 renombrar todo para que se quite esa coletilla 
-	## 1) quitar columna genotipo para de las muestras excluidas y ademas quitar la coletilla de los duupp y tal
-	#bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/tmp/imputed_${date_paste}_tmp_2.vcf.gz
-	#bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/tmp/merged_${date_paste}_tmp_2.vcf.gz
+ # QUITAR COLUMNA GENOTIPO DE MIS SAMLES EXLCUIDOS Y QUITAR LA COLETILLA DEL REPEAT, DE LAS MUESTRAS QUE SE QUEDAN
+  #In summary, these commands are removing the genotype column de las muestras que excluimos y ademas LUEGO quitando la coletilla de: repeat1..., repeat2... que quedan en la columna del genotipo, debe ser un solo repeat por 
+  # ADN lo que se deja dentro porque si no al quitar la coletilla habria 2 (ejemplo repeat100-000 y repeat200-000, si en exluidas no esta alguna de las dos entonces no se van a quitar ninguna y al quitar la coletilla quedaria la meustra repetida)
+  # por eso es importante verificar que en excluidas esten todos -1 repeat de cada muestra que tiene repeats
 
- 	### 2) quitar coletilla de repeat3 a lo largo de todo el imputed y el merged que se ha quedado en el vcf temporal de merged y imputed
- 	#bcftools view ${path_maf}/tmp/imputed_${date_paste}_tmp_2.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
-  	#bcftools view ${path_maf}/tmp/merged_${date_paste}_tmp_2.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
+  bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
+  bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 
- 	#JUNTAR PUNTO 1 Y PUNTO 2: QUITAR COLUMNAS GENOTIPO DE MIS EXLCUIDOS Y QUITAR LA COLETILLA DEL REPEAT, SI HUBIERA COLUMNA DE DUOTAGGG HABRIA QUE QUITARLA TAMBIEN
-  	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
-	bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
-
-  	#mover las excluidas a excluidas 
+  #mover VCFS DE muestras excluidas a carpeta de discarded (tanto su vcf como su bed) es una nueva carpeta llamada discarded_tmp, en la original estan los discarded al inicio 
 	for i in $(cat ${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv);
 	do
  		# ESTO DE INCORPORATED ES SOLO PARA CUANDO SE ACTUALICE LA BASE DE DATOS LA PROXIMA VEZ PORQUE AHORA NO HAY INCORPORATED
@@ -657,47 +556,28 @@ else
 	done
 
 
-	# Rename duplicate samples: DUP GONZALO -> ESTO PARA CUANDO SE ACTUALICE LA BASE DE DATOS Y YA HAYA EN INCOPORATED POR SI SE LE METE UNA NUEVA QUE YA ESTUVIERA EN LA BASE DE DATOS
-	#### las de dUptag, no las mias
-	#for vcffile in ${path_maf}/individual_vcf/*/dUpTaGgG*.gz; 
-	#do
-		#bcftools view ${vcffile} | sed "s/dUpTaGgG//g" | bgzip -c > ${path_maf}/individual_vcf/tmp.vcf.gz
-		#mv ${path_maf}/individual_vcf/tmp.vcf.gz ${vcffile}
-	#done
-
-  	# De mi dup3 que se haya quedado, quitarle al vcf individual todas las coletillas de dup3 que encuentre dentro de todo el vcf
+  # De las muestras que se llaman repeatX que se hayan quedado en new, quitarle al vcf individual todas las coletillas de repeatX que encuentre dentro de todo el vcf
 	for vcffile in ${path_maf}/individual_vcf/*/repeat*.gz; 
 	do
 		bcftools view ${vcffile} | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/individual_vcf/tmp.vcf.gz
 		mv ${path_maf}/individual_vcf/tmp.vcf.gz ${vcffile}
 	done
 
-	# # Perl rename
-	# rename s/"dUpTaGgG"/""/g ${path_maf}/individual_vcf/incorporated_vcf/* # The util-linux version, with syntax rename fgh jkl fgh*
-	# rename s/"dUpTaGgG"/""/g ${path_maf}/individual_vcf/discarded_vcf_tmp/*
-	# rename s/"dUpTaGgG"/""/g ${path_maf}/individual_vcf/new_vcf/*
-	# rename s/"dUpTaGgG"/""/g ${path_maf}/coverage/incorporated_bed/*
-	# rename s/"dUpTaGgG"/""/g ${path_maf}/coverage/discarded_bed_tmp/*
-	# rename s/"dUpTaGgG"/""/g ${path_maf}/coverage/new_bed/*
+  # De las muestras que se llaman repeatX que se han movido a discarded_vcf_tmp, quitarle al vcf individual todas las coletillas de repeatX que encuentre dentro de todo el vcf
+	for vcffile in ${path_maf}/discarded_vcf_tmp/*/repeat*.gz; 
+	do
+		bcftools view ${vcffile} | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/individual_vcf/tmp.vcf.gz
+		mv ${path_maf}/discarded_vcf_tmp/tmp.vcf.gz ${vcffile}
+	done
 
-	# util-linux rename: ESTO PARA RENAME LOS ARCHIVOS CON LA COLETILLA DEL DUPP QUE AHORA NO SE HACE
-	#rename "dUpTaGgG" "" ${path_maf}/individual_vcf/incorporated_vcf/* # The util-linux version, with syntax rename fgh jkl fgh*
-	#rename "dUpTaGgG" "" ${path_maf}/individual_vcf/discarded_vcf_tmp/*
-	#rename "dUpTaGgG" "" ${path_maf}/individual_vcf/new_vcf/*
-	#rename "dUpTaGgG" "" ${path_maf}/coverage/incorporated_bed/*
-	#rename "dUpTaGgG" "" ${path_maf}/coverage/discarded_bed_tmp/*
-	#rename "dUpTaGgG" "" ${path_maf}/coverage/new_bed/*
-
-  	### de mis repeat1, repeat2 de todos lados, quitarles la coletilla a todos (REPEAT1, REPEAT2... ETC)
-	#no hay todavia incorporated, porque se mueven al final, ademas va a dar error en las que no tengan la coletilla
-     	#for file in ${path_maf}/individual_vcf/incorporated_vcf/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
+  ### de mis repeat1, repeat2 de todos lados,RENOMBRAR los archivos: o sea quitar las coletillas de REPEAT1, REPEAT2 de los nombres de los archivos
 	for file in ${path_maf}/individual_vcf/discarded_vcf_tmp/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
 	for file in ${path_maf}/individual_vcf/new_vcf/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
-	#for file in ${path_maf}/coverage/incorporated_bed/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
 	for file in ${path_maf}/coverage/discarded_bed_tmp/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
 	for file in ${path_maf}/coverage/new_bed/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
 
 fi
+
 tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
 tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 
@@ -705,10 +585,6 @@ ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" 
-
-
-
-
 
 #===================#
 # Database creation #
@@ -730,7 +606,7 @@ cd ${path_maf}/db/${date_dir}/
 #--samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
 
 #NECESITO LA VERSION 0.2.120 de hail, hasta que en la uam no la actualicen la que hay en /lustre/local/miniconda/python-3.6/lib/python3.6/site-packages/hail-0.2.30.dist-info
-#cargo mi environment que tiene hail 0.2.120
+#cargo mi environment que tiene hail 0.2.120, ya me actualizaron el hail pero sigo usando mi environment de conda
 source /home/graciela/anaconda3/bin/activate hail
 
 python3 ${task_dir}/supersub_callMAF.py \
@@ -758,24 +634,28 @@ tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz
 
 cd ${path_maf}/db/${date_dir}
 
-#1) SET ID COLUMN: y ademas crearle su .tbi INDEX
+#1) BASE DE DATOS: SET ID COLUMN: y ademas crearle su .tbi INDEX -> A LA BASE DE DATOS
 
 bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o MAFdb_AN20_${date_paste}_ID.vcf.gz -O z MAFdb_AN20_${date_paste}.vcf.gz
 tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
 
+## 2) HACER EL SPLIT DE MULTIALLELICAS A BIALELICAS, TABIX y luego HACERLE EL SAMPLE ID Y TABIX al vcf del ID -> se necesita para hacer bien las queries
+bcftools norm -m- ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z
+tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
 
+bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
+tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz
 
-## antiguo GUR parte 2 mal:
-#bcftools annotate --set-id '%CHROM\_%POS\_%REF\_%FIRST_ALT' MAFdb_AN20_${date_paste}.vcf.gz > MAFdb_AN20_${date_paste}_ID.vcf.gz
-#mv MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
-#bgzip -c ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf > ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
-#tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
-#### antiguo GUR
-#mv MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
-#bcftools view -Oz -o MAFdb_AN20_${date_paste}_ID.vcf.gz MAFdb_AN20_${date_paste}_ID.vcf
-#htsfile MAFdb_AN20_${date_paste}_ID.vcf.gz
-##by default is .csi -> hay que poner opcion -t para que me del el .tbi
-#bcftools index -t MAFdb_AN20_${date_paste}_ID.vcf.gz 
+#3) MERGED_LIMPIO: SET ID COLUMN: y ademas crearle su .tbi INDEX -> AL MERGED LIMPIO -> ESTO ES OPTATIVO PERO LO NECESITO PARA LAS QUERIES DE LA BASE DE DATOS
+
+#bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}_ID.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
+#tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}_ID.vcf.gz
+
+#4) IMPUTED_LIMPIO: SET ID COLUMN: y ademas crearle su .tbi INDEX -> AL IMPUTED LIMPIO -> OPTATIVO MUY -> no se necesita para nada por ahora
+
+#bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}_ID.vcf.gz -O z ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
+#tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}_ID.vcf.gz
+
 
 
 ENDTIME=$(date +%s)
@@ -785,12 +665,9 @@ echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 
 
 
-
-
 #========================================#
 # Moving files and removing tmp diectory #
 #========================================#
-
 
 
 # Moving log and tsv files from the relationship PLINK test to the metadata directory
@@ -804,11 +681,11 @@ mv ${path_maf}/tmp/plinkout/*tsv ${path_maf}/metadata/${date_dir}/plinkout
 # rm -r ${path_maf}/tmp/
 # rm -r ${path_maf}/individual_vcf/tmp_vcf/
 
-# Moving the new samples to the incorporated
+# Moving the new samples to the incorporated -> o sea todas vuelven a estar en incorporated hasta la siguiente base de datos
 mv ${path_maf}/individual_vcf/new_vcf/* ${path_maf}/individual_vcf/incorporated_vcf/
 mv ${path_maf}/coverage/new_bed/* ${path_maf}/coverage/incorporated_bed/
 
-# Moving temporal discarded samples and removing folder
+# Moving temporal discarded samples to discarded and remove folder
 mv ${path_maf}/individual_vcf/discarded_vcf_tmp/* ${path_maf}/individual_vcf/discarded_vcf/
 mv ${path_maf}/coverage/discarded_bed_tmp/* ${path_maf}/coverage/discarded_bed/
 #rm -r ${path_maf}/individual_vcf/discarded_vcf_tmp
