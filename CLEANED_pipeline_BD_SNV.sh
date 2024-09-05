@@ -1,6 +1,9 @@
 
 #!/bin/bash
 
+
+############## IMPORTANTE PARA PROXIMA BASE DE DATOS: TEMA HACER UN SPLIT DE LAS MULTIALELICAS EN LOS SUBSETS DE LOS VCFS INDIVIDUALES
+
 ################################### PIPELINE DEFINITIVA PARA CREAR LA BASE DE DATOS DESDE 0 o ACTUALIZARLA. ESTA BASE DE DATOS SE CREA A PARTIR DE LOS VCFS EN LA CARPETA DE NEW_VCF. 
 ### 1) NUEVA BASE DE DATOS: SI SE ESTA CREANDO LA PRIMERA BASE DE DATOS: directamente poner todos los vcfs en new_vcf y los mosdepth en new_bed
 ### 2) ACTUALIZACION BASE DE DATOS: SI SE ESTAN CREANDO SUCESIVAS BASES DE DATOS A PARTIR DE UNA QUE YA HABIA:  mover los vcfs de incorporated_vcf a new_vcf y los incorporated_bed a new_bed y juntarlos con los nuevos que estemos metiendo
