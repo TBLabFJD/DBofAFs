@@ -261,9 +261,13 @@ function MERGED {
 
 	bcftools merge -l ${2} -O z -o ${path_maf}/tmp/nosplit_merge.${iname}.vcf.gz
 	tabix -p vcf ${path_maf}/tmp/nosplit_merge.${iname}.vcf.gz
-  ## hacer split de los sites multialelicos 
-  bcftools norm -m- ${path_maf}/tmp/nosplit_merge.${iname}.vcf.gz -o ${path_maf}/tmp/merge.${iname}.vcf.gz -O z
-  tabix -p vcf ${path_maf}/tmp/merge.${iname}.vcf.gz
+ 
+	## hacer split de los sites multialelicos 
+	bcftools norm -m- ${path_maf}/tmp/nosplit_merge.${iname}.vcf.gz -O z -o ${path_maf}/tmp/merge.${iname}.vcf.gz
+	tabix -p vcf ${path_maf}/tmp/merge.${iname}.vcf.gz
+ 
+	rm ${path_maf}/tmp/nosplit_merge.${iname}.vcf.gz
+	rm ${path_maf}/tmp/nosplit_merge.${iname}.vcf.gz.tbi
   
 } 
 
@@ -383,13 +387,13 @@ function IMPUTE {
   	## o sea en total hay #3455 lineas de metadata tipo ##, si en algun momento resulta que hay mas entonces habria que cambiar el head -n y poner mas
  	skiprows=$(bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n 5000 | grep -n "#CHROM" | sed 's/:.*//')
 	numrows="$((${skiprows}-1))"
-	bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n ${numrows} > ${path_maf}/tmp/nosplit_${iname}_imputed.vcf
+	bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n ${numrows} > ${path_maf}/tmp/${iname}_imputed.vcf
 
 	#python ${task_dir}/imputeValues.py \
   	python /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks/sub_imputeValues.py \
 	--mergedvcf ${path_maf}/tmp/${iname}_merged.vcf.gz \
 	--skiprows ${skiprows} \
-	--imputedvcf ${path_maf}/tmp/nosplit_${iname}_imputed.vcf \
+	--imputedvcf ${path_maf}/tmp/${iname}_imputed.vcf \
 	--covFilesPath ${path_maf}/tmp/covFiles/ \
 	--clusterSample ${iname}
 
@@ -403,18 +407,14 @@ function IMPUTE {
   	# PROCESO OTRO MILLON, Y ASI 40 VECES ENTONCES LA LINEA DEL HEADER SE VA REPITIENDO Y HAY QUE QUITAR TODAS LAS QUE SE HAN IDO REPITIENDO
 	# Remove duplicate headers del imputed vcf: (#CHROM INFO FILTER...) todas las veces que sale a lo largo del vcf menos la primera y luego comprimir
 
-	cat ${path_maf}/tmp/nosplit_${iname}_imputed.vcf | awk "!/^#CHROM/ || !seen[\$0]++" | bgzip -c > ${path_maf}/tmp/nosplit_${iname}_imputed.vcf.gz
+	cat ${path_maf}/tmp/${iname}_imputed.vcf | awk "!/^#CHROM/ || !seen[\$0]++" | bgzip -c > ${path_maf}/tmp/${iname}_imputed.vcf.gz
   
   	## Esta bgzip es la linea normal de comprimir el vcf pero si la uso estaria dejando las lineas del header repetidas a lo largo del vcf
 	#bgzip -c ${path_maf}/tmp/${iname}_imputed.vcf > ${path_maf}/tmp/${iname}_imputed.vcf.gz
 
  	### indice normal:
- 	tabix -p vcf ${path_maf}/tmp/nosplit_${iname}_imputed.vcf.gz
-	rm ${path_maf}/tmp/nosplit_${iname}_imputed.vcf
-
-   ## hacer split de los sites multialelicos 
-  bcftools norm -m- ${path_maf}/tmp/nosplit_${iname}_imputed.vcf.gz -o ${path_maf}/tmp/${iname}_imputed.vcf.gz -O z
-  tabix -p vcf ${path_maf}/tmp/${iname}_imputed.vcf.gz
+ 	tabix -p vcf ${path_maf}/tmp/${iname}_imputed.vcf.gz
+	rm ${path_maf}/tmp/${iname}_imputed.vcf
 	
 }
 
@@ -650,22 +650,32 @@ bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o MAFdb_AN20_${dat
 tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
 
 ## 2) HACER EL SPLIT DE MULTIALLELICAS A BIALELICAS, TABIX y luego HACERLE EL SAMPLE ID Y TABIX al vcf del ID -> se necesita para hacer bien las queries
-bcftools norm -m- ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z
-tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
+## TAMBIEN LEFT ALIFGN LOS INDELS PARA QUE MACHEEN CPN LA BASE DE DATOS QUE ESTA LEFT ALIGNED PARA SACAR LOS PACIENTES
+#bcftools norm -m- ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z
+#bcftools norm -m - ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz \
+#-f /lustre/NodoBIO/bioinfo/references/hg38/hg38.fa \
+#-o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z
+#tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
 
-bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
-tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz
+#bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
+#tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz
 
 #3) MERGED_LIMPIO: SET ID COLUMN: y ademas crearle su .tbi INDEX -> AL MERGED LIMPIO -> ESTO ES OPTATIVO PERO LO NECESITO PARA LAS QUERIES DE LA BASE DE DATOS
 
 #bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}_ID.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 #tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}_ID.vcf.gz
 
-#4) IMPUTED_LIMPIO: SET ID COLUMN: y ademas crearle su .tbi INDEX -> AL IMPUTED LIMPIO -> OPTATIVO MUY -> no se necesita para nada por ahora
+#4) IMPUTED_LIMPIO: HACER EL SPLIT DE MULTIALLELICAS A BIALELICAS, TABIX y luego HACERLE EL SAMPLE ID Y TABIX al vcf del ID -> se necesita para hacer bien las queries
+## TAMBIEN LEFT ALIFGN LOS INDELS PARA QUE MACHEEN CPN LA BASE DE DATOS QUE ESTA LEFT ALIGNED PARA SACAR LOS PACIENTES
+SET ID COLUMN: y ademas crearle su .tbi INDEX 
 
-#bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}_ID.vcf.gz -O z ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
-#tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}_ID.vcf.gz
+bcftools norm -m - ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
+-f /lustre/NodoBIO/bioinfo/references/hg38/hg38.fa \
+-o ${path_maf}/imputed_vcf/${date_dir}/split_multi_imputed_${date_paste}.vcf.gz -O z
+tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_imputed_${date_paste}.vcf.gz
 
+bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/imputed_vcf/${date_dir}/split_multi_imputed_${date_paste}_ID.vcf.gz -O z ${path_maf}/imputed_vcf/${date_dir}/split_multi_imputed_${date_paste}.vcf.gz
+tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/split_multi_imputed_${date_paste}_ID.vcf.gz
 
 
 ENDTIME=$(date +%s)
