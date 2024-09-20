@@ -649,34 +649,19 @@ cd ${path_maf}/db/${date_dir}
 bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o MAFdb_AN20_${date_paste}_ID.vcf.gz -O z MAFdb_AN20_${date_paste}.vcf.gz
 tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
 
-## 2) HACER EL SPLIT DE MULTIALLELICAS A BIALELICAS, TABIX y luego HACERLE EL SAMPLE ID Y TABIX al vcf del ID -> se necesita para hacer bien las queries
-## TAMBIEN LEFT ALIFGN LOS INDELS PARA QUE MACHEEN CPN LA BASE DE DATOS QUE ESTA LEFT ALIGNED PARA SACAR LOS PACIENTES
+## 2) AL MERGED -> 1) split las multialelicas ; 2) left align los indels para que macheen con las variantes del MAFdb_AN20
+
+#-------------- NO USAR: esto solo HACER EL SPLIT DE MULTIALLELICAS A BIALELICAS, TABIX  -> SOLO HACE EL SPLIT, ESTO NO HACE EL LEFT ALIGN
 #bcftools norm -m- ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z
-#bcftools norm -m - ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz \
-#-f /lustre/NodoBIO/bioinfo/references/hg38/hg38.fa \
-#-o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z
-#tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
 
-#bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
-#tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz
-
-#3) MERGED_LIMPIO: SET ID COLUMN: y ademas crearle su .tbi INDEX -> AL MERGED LIMPIO -> ESTO ES OPTATIVO PERO LO NECESITO PARA LAS QUERIES DE LA BASE DE DATOS
-
-#bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}_ID.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
-#tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}_ID.vcf.gz
-
-#4) IMPUTED_LIMPIO: HACER EL SPLIT DE MULTIALLELICAS A BIALELICAS, TABIX y luego HACERLE EL SAMPLE ID Y TABIX al vcf del ID -> se necesita para hacer bien las queries
-## TAMBIEN LEFT ALIFGN LOS INDELS PARA QUE MACHEEN CPN LA BASE DE DATOS QUE ESTA LEFT ALIGNED PARA SACAR LOS PACIENTES
-SET ID COLUMN: y ademas crearle su .tbi INDEX 
-
-bcftools norm -m - ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
+##-------------- 2)  HACER EL SPLIT DE MULTIALLELICAS A BIALELICAS + LEFT ALIFGN LOS INDELS PARA QUE MACHEEN CPN LA BASE DE DATOS QUE ESTA LEFT ALIGNED PARA SACAR LOS PACIENTES
+bcftools norm -m - ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz \
 -f /lustre/NodoBIO/bioinfo/references/hg38/hg38.fa \
--o ${path_maf}/imputed_vcf/${date_dir}/split_multi_imputed_${date_paste}.vcf.gz -O z
-tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_imputed_${date_paste}.vcf.gz
+-o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z
+tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
 
-bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/imputed_vcf/${date_dir}/split_multi_imputed_${date_paste}_ID.vcf.gz -O z ${path_maf}/imputed_vcf/${date_dir}/split_multi_imputed_${date_paste}.vcf.gz
-tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/split_multi_imputed_${date_paste}_ID.vcf.gz
-
+bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
+tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz
 
 ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
