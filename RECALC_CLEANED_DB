@@ -285,8 +285,8 @@ if [ "$file_count" -gt 1 ]; then
   # HAY MÁS DE 1 VCF PARA MERGE: merge_aa, merge_bb.. ORIGINALMENTE: >500 VCF rn la carpeta
 	echo LINEA GONZALO 
 	bcftools merge -O z -o ${path_maf}/tmp/no_join_merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/merge.*.vcf.gz
-  ###tabix: puesto el 22deoctubre2924
-  tabix -p vcf ${path_maf}/tmp/no_join_merged_${date_paste}_tmp.vcf.gz
+  	###tabix: puesto el 22deoctubre2924
+  	tabix -p vcf ${path_maf}/tmp/no_join_merged_${date_paste}_tmp.vcf.gz
 else
   # solo hay 1 VCF (MERGE_AA), no hay que merge nada: originalmente <500 VCF en new_vcf
 	echo LINEA GRACIELA
@@ -299,12 +299,16 @@ echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 
 ##22DEOCTUBRE DEL 2024
-#### PASO 1: JUNTAR LAS MULTIALELICAS Y RECALCULAR EL AC Y AN PARA QUE SOLO HAYA UNA VARIANTE MULTIALELICA POR POSICION: SI NO LO RECALCULO EL AC Y AN ESTAN MAL
-bcftools norm -m +any -Oz -o ${path_maf}/tmp/no_join_merged_${date_paste}_tmp.vcf.gz
-tabix -p vcf ${path_maf}/tmp/no_join_merged_${date_paste}_tmp.vcf.gz
+#### PASO 1: LEFT ALIGN TODOS LOS INDELS
+bcftools norm -f /lustre/NodoBIO/bioinfo/fjd/references/hg38/hg38.fa.gz -Oz -o ${path_maf}/tmp/left_align_no_join_merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/no_join_merged_${date_paste}_tmp.vcf.gz
+tabix -p vcf ${path_maf}/tmp/left_align_no_join_merged_${date_paste}_tmp.vcf.gz
+
+#### PASO 2: JUNTAR LAS MULTIALELICAS Y RECALCULAR EL AC Y AN PARA QUE SOLO HAYA UNA VARIANTE MULTIALELICA POR POSICION: SI NO LO RECALCULO EL AC Y AN ESTAN MAL
+bcftools norm -m +any -Oz -o ${path_maf}/tmp/left_align_join_merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/left_align_no_join_merged_${date_paste}_tmp.vcf.gz
+tabix -p vcf ${path_maf}/tmp/left_align_join_merged_${date_paste}_tmp.vcf.gz
 
 ### esto es un plugin que por ahora no esta en la uam
-bcftools +fill-AN-AC -Oz -o ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/no_join_merged_${date_paste}_tmp.vcf.gz
+bcftools +fill-AN-AC -Oz -o ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/left_align_join_merged_${date_paste}_tmp.vcf.gz
 
 
 #============#
