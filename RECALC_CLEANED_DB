@@ -303,12 +303,18 @@ echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 bcftools norm -f /lustre/NodoBIO/bioinfo/fjd/references/hg38/hg38.fa.gz -Oz -o ${path_maf}/tmp/left_align_no_join_merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/no_join_merged_${date_paste}_tmp.vcf.gz
 tabix -p vcf ${path_maf}/tmp/left_align_no_join_merged_${date_paste}_tmp.vcf.gz
 
-#### PASO 2: JUNTAR LAS MULTIALELICAS Y RECALCULAR EL AC Y AN PARA QUE SOLO HAYA UNA VARIANTE MULTIALELICA POR POSICION: SI NO LO RECALCULO EL AC Y AN ESTAN MAL
+#### PASO 2: JUNTAR LAS MULTIALELICAS (se mergean los genotipos de las muestras) PARA QUE SOLO HAYA UNA VARIANTE MULTIALELICA POR POSICIOn (NO VARIAS POR POSICION)
 bcftools norm -m +any -Oz -o ${path_maf}/tmp/left_align_join_merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/left_align_no_join_merged_${date_paste}_tmp.vcf.gz
 tabix -p vcf ${path_maf}/tmp/left_align_join_merged_${date_paste}_tmp.vcf.gz
 
+### PASO 3: imputar con 0 las que se han quedado como ./4 y que sea 0/4 por ejemplo (es decir, ponerla la referencia porque si no en el recuento de fill AN-AC no va)
+zcat ${path_maf}/tmp/left_align_join_merged_${date_paste}_tmp.vcf.gz | sed -E 's/\.\/([0-9]+)/0\/\1/g' | bgzip > ${path_maf}/tmp/imputed_left_align_join_merged_${date_paste}_tmp.vcf.gz
+tabix -p vcf ${path_maf}/tmp/imputed_left_align_join_merged_${date_paste}_tmp.vcf.gz
+
+### PASO 4: RECALCULAR EL AC Y AN: SI NO LO RECALCULO EL AC Y AN ESTAN MAL
 ### esto es un plugin que por ahora no esta en la uam
-bcftools +fill-AN-AC -Oz -o ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/left_align_join_merged_${date_paste}_tmp.vcf.gz
+bcftools +fill-AN-AC -Oz -o ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/imputed_left_align_join_merged_${date_paste}_tmp.vcf.gz
+tabix -p vcf ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz
 
 
 #============#
