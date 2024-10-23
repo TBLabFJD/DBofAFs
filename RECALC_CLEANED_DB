@@ -371,6 +371,8 @@ function PL {
 	path_maf=${1}
 	filename="$(basename ${2})"
 	bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${2} | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt
+	# GUR 23 DE OCTUBRE: este es el bueno de quitar las posciones repetidas que esten dos veces en dos intervalos y dejar solo la primera interaccion
+	bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${2} | awk '!seen[$1, $2, $3]++' | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt
 } 
 
 export -f PL
