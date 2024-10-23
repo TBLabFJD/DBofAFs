@@ -317,6 +317,18 @@ echo "	Remove overlapping regions in new bed files" >> ${path_maf}/metadata/${da
 SUBSTARTTIME=$(date +%s)
 echo "  Remove overlapping regions in new bed files"
 
+
+### a ver este codigo no tiene ningun sentido creo, porque lo que hace es quitar del bed inicial del mosdepth las regiones SOLAPANTES que tienen mas de 10 reads para que luego no salgan posiciones repetidas
+#en plan si hay un itnervalo de 3:10 - 10:inf y otro de 5:8 - 10:inf cuando se haga el intersect la poscion 6 va a salir repetida porque esta en ambos intervalos, lo unico que se supone que con este codigo quita
+# las regiones solapantes pero luego como que no lo usa o no se que hace, entonces yo estaba implementado un codigo nuevo para hacer bien el intersect 
+# basicamente cuando hace el intersect va a salir algo tipo:
+#chr10	17833520	17833520	chr10	17833379	17834191	10:inf
+#chr10	17833520	17833520	chr10	17833503	17833537	10:inf
+# Esto quiere decir que la posicion 17833520 (sale del merged_variant_position.bed) se ha detectado en dos regiones despues, con que nos quedemos la primera iteracion nos vale.
+# No hace falta filtrar diciendo "si sale en ." primero y luego sale 10:inf, en el siguiente intervalo hay que poner 10:inf, pero eso no pasa porque siempre esta en 10:in los intervalos de cada 
+#bed de partida, entonces con decir quedate la primera iteracion nos vale
+
+
 for file in ${path_maf}/coverage/new_bed/*.bed; 
 do 
 	sort -k1,1 -k2,2n ${file} > ${path_maf}/coverage/new_bed/tmp.bed ; 
@@ -344,7 +356,10 @@ echo "  Making coverage files"
 function PL {
 	path_maf=${1}
 	filename="$(basename ${2})"
-	bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${2} | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt
+	#bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${2} | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt
+ 	# GUR 23 DE OCTUBRE: este es el bueno de quitar las posciones repetidas que esten dos veces en dos intervalos y dejar solo la primera interaccion
+	bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${2} | awk '!seen[$1, $2, $3]++' | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt
+
 } 
 
 export -f PL
