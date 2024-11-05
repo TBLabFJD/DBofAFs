@@ -26,6 +26,31 @@
 #7) reorganizar la pipeline para que se haga el merged y el imputed y luego la base de datos y por ultimo corregir los archivos de los repeats de quitarles la coletilla
 # a sus vcfs en el filename, dentro y en el bed 
 
+########## PARTE 2 TEMA SPLITS
+# NOS HACE FALTA LA VERSION DE BCFTOOLS 1.21 (EN VEZ DE LA 1.16 QUE SE CARGA EN LA UAM CON module load bcftools). NECESITAMOS LA 1.21 POR 2 RAZONES: 
+# 1) POR LOS PLUGINS DEL RECALC (aunque ya los han puesto)
+# 2) porque al hacer el join de las multialelicas no se pegaban bien los genotipos -> ponian ./2 en vez de 0/2 en algunas muestras -> esto yo lo cambiaba a mano epro ya lo han implementado
+# en bcftools 1.21 porque antes no iba
+
+#IMPORTANTE: NO SE SI INTERFIERE EL BCFTOOLS 1.21 CON EL MINICONDA/3.6, POR ESO ES MEJOR QUE PONGNAN EN LA UAM EL BCFTOOLS 1.21
+
+#IMPORTANTE 2: AL CREAR LA BASE DE DATOS CON BCFTOOLS 1.21 LUEGO CUANDO LO VAMOS A ANOTAR EL VCF DEL MAFdb final da un error en el header del vcf, resulta que con bcftools 1.15 no lo lee bien
+#esta es la version que esta en parrot y con bcftools 1.10 si la lee bien, asi que hay que correr el vcf con la rama de github que he creado yo metiendo bcftools 1.10:
+#https://github.com/TBLabFJD/PARROT-FJD/tree/change_bcftools_version
+
+
+#para cargar bcftools 1.21: PEDIR QUE LO PONGAN EN LA UAM O CARGARLO YO QUE LO TENGO EN NOBACKUP
+#bcftools 1.21 con plugins instalado por mi
+export PATH=$HOME/bcftools/1.21/bin:$PATH
+export LD_LIBRARY_PATH=/lustre/home/graciela/libs/htslib-1.21/htslib-1.21/:$LD_LIBRARY_PATH
+
+#ORIGINAL VERSION 1.16:
+#no se encontraba el libcrypto.so.1.0.0 que necesitaba el bcftools, asi que con esta linea le digo que busque en /lib64
+#en realidad esto no era el problema, el problema es que si en el nodo login (1,2,3) de la UAM hago module load bcftools y luego no hago module purge bcftools cuando mando trbajos al nodo de calculo
+# no se encuentra la libreria, asi que nunca hacer module load nada en el nodo login (tampoco se puede hacer porque es ilegal pero bueno...)
+
+#export LD_LIBRARY_PATH=/lib64:$LD_LIBRARY_PATH
+#module load bcftools
 
 module load bedtools
 module load miniconda/3.6
@@ -33,12 +58,7 @@ module load gcc
 module load plink
 module load R/R
 source ~/.Renviron
-#no se encontraba el libcrypto.so.1.0.0 que necesitaba el bcftools, asi que con esta linea le digo que busque en /lib64
-#en realidad esto no era el problema, el problema es que si en el nodo login (1,2,3) de la UAM hago module load bcftools y luego no hago module purge bcftools cuando mando trbajos al nodo de calculo
-# no se encuentra la libreria, asi que nunca hacer module load nada en el nodo login (tampoco se puede hacer porque es ilegal pero bueno...)
 
-export LD_LIBRARY_PATH=/lib64:$LD_LIBRARY_PATH
-module load bcftools
 
 #path graciela java 8: nuevo path -> actualizado el 20 abril 2024
 ## IMPORTANTE: verificar que el java 8 sea este path, porque en la UAM lo actualizan cada x meses y este path hay que ir cambiandolo
@@ -550,8 +570,8 @@ mkdir "${path_maf}/coverage/discarded_bed_tmp"
 
 if [[ $(cat ${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv | wc -l) == 0 ]]
 then
-	mv ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz 
-	mv ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz 
+	mv ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz ${path_maf}/imputed_vcf/${date_dir}/PREimputed_${date_paste}.vcf.gz 
+	mv ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/merged_vcf/${date_dir}/PREmerged_${date_paste}.vcf.gz 
 else
 
  # QUITAR COLUMNA GENOTIPO DE MIS SAMLES EXLCUIDOS Y QUITAR LA COLETILLA DEL REPEAT, DE LAS MUESTRAS QUE SE QUEDAN
@@ -559,8 +579,30 @@ else
   # ADN lo que se deja dentro porque si no al quitar la coletilla habria 2 (ejemplo repeat100-000 y repeat200-000, si en exluidas no esta alguna de las dos entonces no se van a quitar ninguna y al quitar la coletilla quedaria la meustra repetida)
   # por eso es importante verificar que en excluidas esten todos -1 repeat de cada muestra que tiene repeats
 
-  bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
-  bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
+  bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/PREimputed_${date_paste}.vcf.gz
+  bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/PREmerged_${date_paste}.vcf.gz
+
+  tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/PREimputed_${date_paste}.vcf.gz
+  tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/PREmerged_${date_paste}.vcf.gz
+
+  ################## EN EL MERGE Y EN EL IMPUTED DEFINITIVO: HACER EL JOIN DE LAS MUTLIALELICAS Y EL RECALC
+  ######## 5 de noviembre de 2024:
+  # Ahora lo que hay que hacer es un JOIN de las multialelicas y un RECALC del AC y AN de cada variante
+  # ese sera el vcf que le pasemos despues al PLINK. IMPORTANTE: NO HACER LEFT-ALIGN PORQUE HAY VARIANTES QUE LAS PONE EN LA POSICION ANTERIOR PERO METE LA LETRA EN MINUSCULA
+  # IMPORTANTE: USAR LA VERSION 1.21 DE BCFTOOLS PARA QUE AL HACER EL JOIN SE META UN 0 EN EL GENOTIPO: EJEMPLO 0/2 EN VEZ DE ./2
+
+  #### PASO 1: JUNTAR LAS MULTIALELICAS (se mergean los genotipos de las muestras) PARA QUE SOLO HAYA UNA VARIANTE MULTIALELICA POR POSICIOn (NO VARIAS POR POSICION)
+  bcftools norm -m +any -Oz -o ${path_maf}/imputed_vcf/${date_dir}/JOIN_PREimputed_${date_paste}.vcf.gz ${path_maf}/imputed_vcf/${date_dir}/PREimputed_${date_paste}.vcf.gz
+  tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/JOIN_PREimputed_${date_paste}.vcf.gz
+
+  ### PASO 2: RECALCULAR EL AC Y AN: SI NO LO RECALCULO EL AC Y AN ESTAN MAL
+  ### esto es un plugin que por ahora no esta en la uam -> ya esta pero solo bcftools 1.16, yo quiero la 1.21
+  bcftools +fill-AN-AC -Oz -o ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz ${path_maf}/imputed_vcf/${date_dir}/JOIN_PREimputed_${date_paste}.vcf.gz
+  tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
+
+  ############# FIN DE JOIN MULTIALELICAS Y RECALC
+
+
 
   #mover VCFS DE muestras excluidas a carpeta de discarded (tanto su vcf como su bed) es una nueva carpeta llamada discarded_tmp, en la original estan los discarded al inicio 
 	for i in $(cat ${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv);
@@ -596,8 +638,6 @@ else
 
 fi
 
-tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
-tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 
 ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
@@ -648,6 +688,32 @@ bgzip -c ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf > ${path_maf}/d
 tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
 
 
+
+
+################## EN EL MERGE DEFINITIVO: HACER EL JOIN DE LAS MUTLIALELICAS Y EL RECALC
+######## 5 de noviembre de 2024:
+# Ahora lo que hay que hacer es un JOIN de las multialelicas y un RECALC del AC y AN de cada variante
+# ese sera el vcf que le pasemos despues al PLINK. IMPORTANTE: NO HACER LEFT-ALIGN PORQUE HAY VARIANTES QUE LAS PONE EN LA POSICION ANTERIOR PERO METE LA LETRA EN MINUSCULA
+# IMPORTANTE: USAR LA VERSION 1.21 DE BCFTOOLS PARA QUE AL HACER EL JOIN SE META UN 0 EN EL GENOTIPO: EJEMPLO 0/2 EN VEZ DE ./2
+
+#### PASO 1: JUNTAR LAS MULTIALELICAS (se mergean los genotipos de las muestras) PARA QUE SOLO HAYA UNA VARIANTE MULTIALELICA POR POSICIOn (NO VARIAS POR POSICION)
+bcftools norm -m +any -Oz -o ${path_maf}/merged_vcf/${date_dir}/JOIN_PREmerged_${date_paste}.vcf.gz ${path_maf}/merged_vcf/${date_dir}/PREmerged_${date_paste}.vcf.gz
+tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/JOIN_PREmerged_${date_paste}.vcf.gz
+
+### PASO 2: RECALCULAR EL AC Y AN: SI NO LO RECALCULO EL AC Y AN ESTAN MAL
+### esto es un plugin que por ahora no esta en la uam -> ya esta pero solo bcftools 1.16, yo quiero la 1.21
+bcftools +fill-AN-AC -Oz -o ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz ${path_maf}/merged_vcf/${date_dir}/JOIN_PREmerged_${date_paste}.vcf.gz
+tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
+
+############# FIN DE JOIN MULTIALELICAS Y RECALC
+
+
+
+
+
+
+
+
 #######GUR: añadir lo del ID para que se creen bien las columnas de la base de datos 
 
 cd ${path_maf}/db/${date_dir}
@@ -658,11 +724,18 @@ bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o MAFdb_AN20_${dat
 tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
 
 ## 2) HACER EL SPLIT DE MULTIALLELICAS A BIALELICAS, TABIX y luego HACERLE EL SAMPLE ID Y TABIX al vcf del ID -> se necesita para hacer bien las queries
-bcftools norm -m- ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z
-tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
+# hace falta bcftools 1.21 para el --force
+bcftools norm -m -any --force -Oz -o ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z
+#tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
 
-bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
-tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz
+
+# este es el original pero no funciona ahora para el merged porque al hacer el join el campo de PL de la columna de INFO no esta bien, hay que hacer --force en bcftools 1.21
+#bcftools norm -m- ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z
+#tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
+
+###no me hace falta la columna ID porque en R ya pega el ID cuando se hace las queries de variantes
+#bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
+#tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz
 
 #3) MERGED_LIMPIO: SET ID COLUMN: y ademas crearle su .tbi INDEX -> AL MERGED LIMPIO -> ESTO ES OPTATIVO PERO LO NECESITO PARA LAS QUERIES DE LA BASE DE DATOS
 
