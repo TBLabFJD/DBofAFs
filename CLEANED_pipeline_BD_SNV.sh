@@ -725,7 +725,12 @@ tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
 
 ## 2) HACER EL SPLIT DE MULTIALLELICAS A BIALELICAS, TABIX y luego HACERLE EL SAMPLE ID Y TABIX al vcf del ID -> se necesita para hacer bien las queries
 # hace falta bcftools 1.21 para el --force
-bcftools norm -m -any --force -Oz -o ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z
+#bcftools norm -m -any --force -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
+
+####  15/01/2025 LA LINEA DE LA 728 ESTA BIEN, PERO HAY QUE AÑADIR EL CHECK REF PARA QUE LAS VARIANTES TIPO: CAGA>C,AAGA las separe: CAGA>C y CAGA>AAGA Y LUEGO CORRIJA LAS QUE SON "largas"
+# POR EJEMPLO CAGA>AAGA LA CORRIGE EN C>A ESTO NO ES LO MISMO QUE HACER LEFT ALIGN
+# la w es para hacer un warning de que la referencia no machea
+bcftools norm -m -any --force -f /mnt/genetica7/references/hg38.fa --check-ref w -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 #tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
 
 
