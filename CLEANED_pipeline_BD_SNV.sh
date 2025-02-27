@@ -719,7 +719,8 @@ tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 cd ${path_maf}/db/${date_dir}
 
 #1) BASE DE DATOS: SET ID COLUMN: y ademas crearle su .tbi INDEX -> A LA BASE DE DATOS
-
+### OJO: 27/02/2025 -> por lo que sea esto a secas no funciona porque dice que el campo del FORMAT esta mal, hay que correrlo exactamente igual que pone aqui pero usando una version mas antigua de bcftools
+#module load bcftools/1.10 -> es decir para lo de antes era la 1.21 pero para anotar el ID bien hay que usar la 1.10
 bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o MAFdb_AN20_${date_paste}_ID.vcf.gz -O z MAFdb_AN20_${date_paste}.vcf.gz
 tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
 
