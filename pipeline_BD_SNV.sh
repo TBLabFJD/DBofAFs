@@ -535,7 +535,7 @@ plink --bfile merged_geno_maf --extract plink.prune.in --make-bed --out merged_g
 #Aqui hacemos Identity by descent (IBD function de PLINK es este comando) Y obtenemos el pi_hat value entre cada par de muestras -> archivo relationship.tsv
 #This command is using PLINK to calculate pairwise relatedness or genetic similarity (ibd) between individuals in the dataset specified by the binary file merged_geno_maf_prunned.
 #--genome indicates that you want to compute genomic relationships.
-#--min 0.05 specifies a minimum allele frequency threshold for variants to be included in the analysis.
+#--min 0.05 specifies que solo salgan las parejas que tienen un pi_hat>=0.05 (para que no se pete de parejas que no estan relacionadas)
 
 plink --bfile merged_geno_maf_prunned --genome --min 0.05 --out relationship_raw
 sed  's/^ *//' relationship_raw.genome > relationship_tmp.tsv
