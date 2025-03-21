@@ -1,4 +1,6 @@
 # DBofAFs
+Estoy haciendo pruebas :)
+
 Pipeline for building a database of allele frequencies. The objective of this pipeline is to create and update a database of Allele Frequencies (AF) using vcf files. A metadata file in TSV must be provided with the sample id, family id and category (e.g. disease or phenotype)  to calculate the AF. The AF is calculated for the whole cohort, subcohorts defined by each category and for a subset of samples acting as pseudocontrols defined by the whole cohort but the selected category (e.g. non-related diseases).
 
 ## License
