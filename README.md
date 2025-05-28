@@ -63,6 +63,7 @@ A TSV file must be provided with information of all samples. This file must have
 Each phenotyope, category or anything needs to be preceded by ":"
 
 Example of the metadata.txt file: 
+
 ADN	FAMILY	SAMPLE	TAG	tag	GENERAL	CATEGORY	SUBCATEGORY
 00/0001	Endocrine0001	00-0001	PPCI	ppci	:endocrg	:endocrt	:searlypuberty -> This patient has 1 disease at each level (general, category, subcategory)
 00/0002	Cardio0001	00-0002 Cardio	cardio	:cardiog	:cardiot	:sarrythmias:scardiomiopathies -> This patient has 1 disease (general and category) and 2 diseases at subcategory
