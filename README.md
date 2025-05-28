@@ -58,6 +58,14 @@ This pipeline has the following steps:
 ## Requirements
 ***Metadata*** 
 A TSV file must be provided with information of all samples. This file must have a header with the following names: `SAMPLE`, `FAMILY` and `CATEGORY`. These column names must be in capital letters. The category can be a disease, phenotype or any feature that can be used to make subcohorts. 
+
+ACTUALIZACION NEW ONTOLOGY WITH THREE LEVELS (README UPDATED ON MAY28th,2025: This file must have a header with the following names: `SAMPLE`, `FAMILY`, `GENERAL`,	`CATEGORY`, `SUBCATEGORY`
+Each phenotyope, category or anything needs to be preceded by : 
+Example 1 of the metadata.txt file: 
+ADN	FAMILY	SAMPLE	TAG	tag	GENERAL	CATEGORY	SUBCATEGORY
+00/0001	Endocrine0001	00-0001	PPCI	ppci	:endocrg	:endocrt	:searlypuberty -> This patient has 1 disease at each level (general, category, subcategory)
+00/0002	Cardio0001	00-0002 Cardio	cardio	:cardiog	:cardiot	:sarrythmias:scardiomiopathies -> This patient has 1 disease (general and category) and 2 diseases at subcategory
+
 ***Directory structure***
 The database directory must have the following directories created before running the pipeline:
 IMPORTANTISIMOOOO: hay que poner merged_vcf no merged_vcfs en el nombre de la carpeta (originalmente pone merged_vcfs y no es así)
