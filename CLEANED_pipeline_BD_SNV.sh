@@ -115,7 +115,9 @@ done
 ### 2) mirar cuantos CES, WES y WGS hay de cada ADN-> priorizar CES over WES y WES over WGS -> mandar a discarded las que no se usan y quedarnos con todas las files del mismo tipo priorizado: si 2 CES me quedo 2 CES, si 2 CES y 1 WGS me quedo 1 WGS etc
 ## Esto se hace para los ADNs duplicados que tengan muestras con varios tipo de secuenciacion. Ejemplo: Si el mismo ADN tiene WES y CES manda su CES a discarded, si WGS y WES manda su WES a discarded. Si 2 del mismo tipo las deja dentro juntas en new
 duplicates=$(sort "${path_maf}/metadata/${date_dir}/original_indivsample.tsv" | uniq -d)
-if [[ $(echo "$duplicates" | wc -l) -gt 0 ]]; then
+#if [[ $(echo "$duplicates" | wc -l) -gt 0 ]]; then
+#esto cambiado el 17/06/2025 -> si no auqnue no haya duplicados imprime una linea 
+if [[ -n "$duplicates" ]]; then
     echo "Duplicate samples in batch:"
     echo "$duplicates"
 
