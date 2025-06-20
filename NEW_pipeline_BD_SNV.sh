@@ -52,14 +52,16 @@
 #export LD_LIBRARY_PATH=/lib64:$LD_LIBRARY_PATH
 #module load bcftools
 
-module load bcftools/1.21
 module load bedtools
-module load miniconda/3.8
+module load miniconda/3.6
 #ana amil: 16/06/2025 hemos puesto minconda 3.8 en vez de 3.6 porque supuestamente hail 0.2.120 esta aqui en la 3.8 cargado
+#ana amil: 17/06/2025 al haber incompatibilidad con perl y parallel se crea un env de conda con hail y se vuelve a poner la verison 3.6
 module load gcc
-module load plink
+#ana amil: 19/06/25 hace falta especifcar la version 1.9 de plink, la version 2.0 corresponde con plink2, que tiene otras funciones
+module load plink/1.90
 module load R/R
-source ~/.Renviron
+#source ~/.Renviron # ver que pasa con esto
+module load bcftools/1.21
 
 
 #path anaamil 16/04 2025
@@ -94,8 +96,7 @@ echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "INICIO:"
 echo $(date)
 
-
-
+# anaamil 17/06/2025 se ha eliminado el filtro familia porque en mi caso solo se van a usar CES -> modifcar linea condicional
 #================#
 # Filtro familia #
 #================#
@@ -115,10 +116,11 @@ done
 ### 2) mirar cuantos CES, WES y WGS hay de cada ADN-> priorizar CES over WES y WES over WGS -> mandar a discarded las que no se usan y quedarnos con todas las files del mismo tipo priorizado: si 2 CES me quedo 2 CES, si 2 CES y 1 WGS me quedo 1 WGS etc
 ## Esto se hace para los ADNs duplicados que tengan muestras con varios tipo de secuenciacion. Ejemplo: Si el mismo ADN tiene WES y CES manda su CES a discarded, si WGS y WES manda su WES a discarded. Si 2 del mismo tipo las deja dentro juntas en new
 duplicates=$(sort "${path_maf}/metadata/${date_dir}/original_indivsample.tsv" | uniq -d)
-if [[ $(echo "$duplicates" | wc -l) -gt 0 ]]; then
+#if [[ $(echo "$duplicates" | wc -l) -gt 0 ]]; then
+#esto cambiado el 17/06/2025 -> si no auqnue no haya duplicados imprime una linea 
+if [[ -n "$duplicates" ]]; then
     echo "Duplicate samples in batch:"
     echo "$duplicates"
-
     while IFS= read -r sample; do
     	files_vcf=($(find "${path_maf}/individual_vcf/new_vcf" -type f -name "${sample}*.vcf.gz"))
 	files_bed=($(find "${path_maf}/coverage/new_bed" -type f -name "${sample}*.global.quantized.bed"))
@@ -136,7 +138,7 @@ if [[ $(echo "$duplicates" | wc -l) -gt 0 ]]; then
                 *CES*) vcf_ces_files+=("$file") ;;
             esac
         done
-        
+
         for file in "${files_bed[@]}"; do
             case "$file" in
                 *WGS*) bed_wgs_files+=("$file") ;;
@@ -144,7 +146,6 @@ if [[ $(echo "$duplicates" | wc -l) -gt 0 ]]; then
                 *CES*) bed_ces_files+=("$file") ;;
             esac
         done
-
         # Function to move file pairs to discarded directory
         move_to_discarded_vcf() {
             local files_to_move=("$@")
@@ -185,7 +186,6 @@ for vcf in ${path_maf}/individual_vcf/new_vcf/*.vcf.gz; do
         file_name=$(basename "$vcf" | cut -d '.' -f1)
         echo "$file_name" >> ${path_maf}/metadata/${date_dir}/indivsample.tsv
 done
-
 #4) lista de IDs unicos de muestras duplicadas que se han quedado despues de mandar a discarded las que no tocaban (aqui se queda rollo: 2 o mas WES de la misma muestra, 2 WGS o mas WES de la misma muestra o 2 CES o mas WES de la misma muestra
 sort "${path_maf}/metadata/${date_dir}/indivsample.tsv" | uniq -d > ${path_maf}/metadata/${date_dir}/dup_samples.tsv
 
@@ -210,7 +210,6 @@ rename_files() {
 
         # Construct the new VCF filename
         new_vcf_filename="repeat${i}${original_vcf_filename}"
-
         # Rename the VCF file
         mv "$vcf_file" "${path_maf}/individual_vcf/new_vcf/${new_vcf_filename}"
 
@@ -239,7 +238,7 @@ done < "$dup_file"
 
 ###### ahora YA SE HAN QUEDADO  los duplicate samples renombrados tal que así (tantos los vcfs como los beds): repeat119-0986.hg38.gatk.CES.v41.20240315.vcf.gz repeat219-0986.hg38.gatk.CES.v41.20240315.vcf.gz y así estan controlados y tambien sus correspondientes BEDs
 ### 6) dentro de los vcs de los que se han renombrado hay que editar la columna de #CRHOM POS REF ALT 00-0000 -> #CRHOM POS REF ALT repeat100-0000 (el nombre de la columna del genotipo)
-# tras dejarlos renombrados con repeat1XX-XXXX.vcf.gz, repeat2XX-XXX.vcf.gz hay que ABRIR los vcfs y 
+# tras dejarlos renombrados con repeat1XX-XXXX.vcf.gz, repeat2XX-XXX.vcf.gz hay que ABRIR los vcfs y
 #renombrar todas las veces que aparezca el sample name XX-XXXX y cambairlo por repeatYXX-XXX
 for vcffile in ${path_maf}/individual_vcf/new_vcf/repeat*.gz; do
  	dir=$(dirname "${vcffile}")
@@ -260,6 +259,7 @@ ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
+
 
 #=======#
 # Merge #
@@ -520,6 +520,7 @@ bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o imputed_${date_p
 geno=0.05
 maf=0.05
 
+
 plink --vcf imputed_${date_paste}_ID_tmp.vcf.gz --make-bed --out merged
 ##lineas nuevas: hay que filtrar primero las 4 y pico millones de variantes con el bed del CES de sofia, para que asi para hacer el prunning y tal ya se "centre" en filtrar las variantes del CES
 ## esto lo hacemos asi porque el 95% de las muestras son CES y asi para sacar las relaciones del pi_hat y tal se hacen en base a las posiciones cubiertas que son las del CES de Sophia aprox
@@ -667,6 +668,9 @@ cd ${path_maf}/db/${date_dir}/
 #cargo mi environment que tiene hail 0.2.120, ya me actualizaron el hail pero sigo usando mi environment de conda
 
 #ana_amil_16/06/2025 -> se supone que ya han actualizado hal 0.2.120 en la uam y lo puedo usar
+#ana_amil_17/06/2025 -> la version de anaconda/3.8 no es compatble con el parallel, me creo un env de conda con hail y lo ejecuto desde ahí
+
+source /home/aamil/miniconda3/bin/activate hail
 
 python3 ${task_dir}/supersub_callMAF.py \
 --multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
@@ -675,7 +679,7 @@ python3 ${task_dir}/supersub_callMAF.py \
 --tmpdir ${TMPDIR} \
 --samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
 
-
+source /home/aamil/miniconda3/bin/deactivate
 
 python ${task_dir}/changeFormat.py \
 --multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
