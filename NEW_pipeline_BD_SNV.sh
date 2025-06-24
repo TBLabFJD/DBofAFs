@@ -177,7 +177,6 @@ if [[ -n "$duplicates" ]]; then
         fi
 
     done <<< "$duplicates"
-fi
 
 
 ###3) Otra vez extraer lista de los sample IDS de los que se han quedado despues de quitar CES<WES<WGS -> es decir pasamos de orig_indiv_sample.tsv a indivsample.tsv
@@ -253,7 +252,11 @@ for vcffile in ${path_maf}/individual_vcf/new_vcf/repeat*.gz; do
  	mv ${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz ${vcffile}
   	mv ${path_maf}/individual_vcf/new_vcf/tmp.vcf.gz.tbi ${vcffile}.tbi
 done
+##ana amil 20/06/025 -> alargar el condicional para que no genere un archivo repeat*.gz. Crear el else para cambiar de nombre original_indivsample
+else
+	mv ${path_maf}/metadata/${date_dir}/original_indivsample.tsv ${path_maf}/metadata/${date_dir}/indivsample.tsv
 
+fi
 
 ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
@@ -376,9 +379,10 @@ echo "  Making coverage files"
 function PL {
 	path_maf=${1}
 	filename="$(basename ${2})"
-	#bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${2} | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt
+	# ana amil 24/06/2025 -> se genera una error, los archivos variantCov no tienen al misma longitud que el position.bed
+	bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${2} | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt
  	# GUR 23 DE OCTUBRE: este es el bueno de quitar las posciones repetidas que esten dos veces en dos intervalos y dejar solo la primera interaccion
-	bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${2} | awk '!seen[$1, $2, $3]++' | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt
+	#bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${2} | awk '!seen[$1, $2, $3]++' | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt
 
 } 
 
@@ -525,7 +529,10 @@ plink --vcf imputed_${date_paste}_ID_tmp.vcf.gz --make-bed --out merged
 ##lineas nuevas: hay que filtrar primero las 4 y pico millones de variantes con el bed del CES de sofia, para que asi para hacer el prunning y tal ya se "centre" en filtrar las variantes del CES
 ## esto lo hacemos asi porque el 95% de las muestras son CES y asi para sacar las relaciones del pi_hat y tal se hacen en base a las posiciones cubiertas que son las del CES de Sophia aprox
 ## 
-plink --bfile merged --extract range /lustre/NodoBIO/bioinfo/fjd/beds/CES_v3_hg38_target.chr.formatted.sorted.annotated.bed --make-bed --out merged_filtered
+##ana amil 20/06/2025 -> al utlizar solo paneles no es necesario que busque parentesco en los genes de CES, compara entre todos los genes de los vcf sin filtro.
+##Pruebo con el archivo .bed de paneles
+##plink --bfile merged --extract range /lustre/NodoBIO/bioinfo/fjd/beds/CES_v3_hg38_target.chr.formatted.sorted.annotated.bed --make-bed --out merged_filtered
+plink --bfile merged --extract range /lustre/NodoBIO/bioinfo/ybenitez/AOsorio_analysis/beds/probes4cnvs.bed --make-bed --out merged_filtered
 plink --bfile merged_filtered --make-bed --geno ${geno} --mind 1 --maf ${maf} --out merged_geno_maf
 ## fin lineas nuevas
 plink --bfile merged_geno_maf --geno ${geno} --mind 1 --maf ${maf} --indep-pairwise 50 5 0.5
@@ -564,8 +571,9 @@ echo "MAKING THE DEFINITIVE MERGED AND IMPUTED VCFs"
 
 mkdir "${path_maf}/merged_vcf/${date_dir}"
 mkdir "${path_maf}/imputed_vcf/${date_dir}"
-mkdir "${path_maf}/individual_vcf/discarded_vcf_tmp"
-mkdir "${path_maf}/coverage/discarded_bed_tmp"
+#ana amil 20/06/2025 -> mkdir -p para que no de error si el directorio ya existe
+mkdir -p "${path_maf}/individual_vcf/discarded_vcf_tmp"
+mkdir -p "${path_maf}/coverage/discarded_bed_tmp"
 
 # Moving individual vcf and bed files from related samples to the discarded folders
 
@@ -616,6 +624,8 @@ else
 		mv ${path_maf}/coverage/new_bed/${i}* ${path_maf}/coverage/discarded_bed_tmp/
 	done
 
+  # ana amil 20/06/2025 -> poner condicional para evitar que busque repeats*.gz si no hay muestras repetidas
+	if [[ -n "$duplicates" ]]; then
 
   # De las muestras que se llaman repeatX que se hayan quedado en new, quitarle al vcf individual todas las coletillas de repeatX que encuentre dentro de todo el vcf
 	for vcffile in ${path_maf}/individual_vcf/*/repeat*.gz; 
@@ -636,7 +646,8 @@ else
 	for file in ${path_maf}/individual_vcf/new_vcf/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
 	for file in ${path_maf}/coverage/discarded_bed_tmp/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
 	for file in ${path_maf}/coverage/new_bed/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
-
+	
+	fi
 fi
 
 
@@ -679,7 +690,7 @@ python3 ${task_dir}/supersub_callMAF.py \
 --tmpdir ${TMPDIR} \
 --samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
 
-source /home/aamil/miniconda3/bin/deactivate
+conda deactivate 
 
 python ${task_dir}/changeFormat.py \
 --multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
@@ -735,7 +746,8 @@ tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
 ####  15/01/2025 LA LINEA DE LA 728 ESTA BIEN, PERO HAY QUE AÑADIR EL CHECK REF PARA QUE LAS VARIANTES TIPO: CAGA>C,AAGA las separe: CAGA>C y CAGA>AAGA Y LUEGO CORRIJA LAS QUE SON "largas"
 # POR EJEMPLO CAGA>AAGA LA CORRIGE EN C>A ESTO NO ES LO MISMO QUE HACER LEFT ALIGN
 # la w es para hacer un warning de que la referencia no machea
-bcftools norm -m -any --force -f /mnt/genetica7/references/hg38.fa --check-ref w -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
+##ana amil 20/06/2025 -> la ruta al hg38.fa era de tblab y no de la uam (/mnt/genetica7/references/hg38.fa)
+bcftools norm -m -any --force -f /home/proyectos/bioinfo/fjd/references/hg38/hg38.fa.gz --check-ref w -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 #tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
 
 
