@@ -74,10 +74,10 @@ export JAVA_OPTS="-Djava.io.tmpdir=${TMPDIR}"
 ##### ana_amil -> 16/06/2025 : hay que rellenar los paths de donde tenemos las cosas
 ## el data base path es TODA la carpeta donde esta db, vcfs, metadata... SIN BARRA AL FINAL
 # Data base path
-path_maf="/home/proyectos/bioinfo/NOBACKUP/aamil/prueba_bd_cancer"
+path_maf="/home/proyectos/bioinfo/NOBACKUP/aamil/BD_cancer/bd_data"
 
 # TSV file with sample-pathology information: ANTES SE PONIAN TSVs ahora yo pongo archivos de texto .txt
-mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/aamil/prueba_bd_cancer/metadata/metadata.txt" # el normal
+mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/aamil/BD_cancer/bd_data/metadata/metadata.txt" # el normal
 
 # Task directory del github
 task_dir="/home/proyectos/bioinfo/NOBACKUP/aamil/DBofAFs/tasks"
@@ -698,6 +698,8 @@ python ${task_dir}/changeFormat.py \
 --mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
 --samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt
 
+# ana amil 25/06/2025 -> eliminar la columna de FORMAT del header para que luego no de error al set ID column
+sed '/^#CHROM/ s/\tFORMAT//' MAFdb_AN20_${date_paste}.vcf > tmp.vcf && mv tmp.vcf MAFdb_AN20_${date_paste}.vcf
 
 bgzip -c ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf > ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
 tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
@@ -736,6 +738,7 @@ cd ${path_maf}/db/${date_dir}
 #1) BASE DE DATOS: SET ID COLUMN: y ademas crearle su .tbi INDEX -> A LA BASE DE DATOS
 ### OJO: 27/02/2025 -> por lo que sea esto a secas no funciona porque dice que el campo del FORMAT esta mal, hay que correrlo exactamente igual que pone aqui pero usando una version mas antigua de bcftools
 #module load bcftools/1.10 -> es decir para lo de antes era la 1.21 pero para anotar el ID bien hay que usar la 1.10
+# ana amil 25/06/2025 -> no hace falta la version de bcftools 1.10, el error está en que no elimina el apartado FORMAT del header, por tanto tiene 9 elementos en la cabecera y 8 en el cuerpo de la tabla. Esta solucionado ya arriba
 bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o MAFdb_AN20_${date_paste}_ID.vcf.gz -O z MAFdb_AN20_${date_paste}.vcf.gz
 tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
 
