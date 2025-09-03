@@ -2,6 +2,15 @@
 #!/bin/bash
 
 
+#====================================================================================#
+
+########## PIPELINE SIN PLINK ##########
+###### NECESARIO INCUIR LISTA DE MUESTRAS EXCLUIDAS EN CARPETA /tmp/plinkout/ #######
+
+#====================================================================================#
+
+
+
 ############## IMPORTANTE PARA PROXIMA BASE DE DATOS: TEMA HACER UN SPLIT DE LAS MULTIALELICAS EN LOS SUBSETS DE LOS VCFS INDIVIDUALES
 
 ################################### PIPELINE DEFINITIVA PARA CREAR LA BASE DE DATOS DESDE 0 o ACTUALIZARLA. ESTA BASE DE DATOS SE CREA A PARTIR DE LOS VCFS EN LA CARPETA DE NEW_VCF. 
@@ -536,40 +545,10 @@ mkdir -p ${path_maf}/tmp/plinkout
 cd ${path_maf}/tmp/plinkout
 bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o imputed_${date_paste}_ID_tmp.vcf.gz -O z ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz
 
-geno=0.05
-maf=0.05
+# ana amil 03/09/2025 ->
+# Necesario incluir la lista de las muestras que queremos excluir previamente para que funcione, hay que hacerlo en ${path_maf}/tmp/plinkout
 
 
-plink --vcf imputed_${date_paste}_ID_tmp.vcf.gz --make-bed --out merged
-##lineas nuevas: hay que filtrar primero las 4 y pico millones de variantes con el bed del CES de sofia, para que asi para hacer el prunning y tal ya se "centre" en filtrar las variantes del CES
-## esto lo hacemos asi porque el 95% de las muestras son CES y asi para sacar las relaciones del pi_hat y tal se hacen en base a las posiciones cubiertas que son las del CES de Sophia aprox
-## 
-##ana amil 20/06/2025 -> al utlizar solo paneles no es necesario que busque parentesco en los genes de CES, compara entre todos los genes de los vcf sin filtro.
-##Pruebo con el archivo .bed de paneles
-##plink --bfile merged --extract range /lustre/NodoBIO/bioinfo/fjd/beds/CES_v3_hg38_target.chr.formatted.sorted.annotated.bed --make-bed --out merged_filtered
-#plink --bfile merged --extract range /lustre/NodoBIO/bioinfo/ybenitez/AOsorio_analysis/beds/probes4cnvs.bed --make-bed --out merged_filtered
-##ana amil 16/07/2025 -> para todas las muestras de cancer, el plink solo funiona si no se le da un archivo .bed
-plink --bfile merged --make-bed --geno ${geno} --mind 1 --maf ${maf} --out merged_geno_maf
-## fin lineas nuevas
-plink --bfile merged_geno_maf --geno ${geno} --mind 1 --maf ${maf} --indep-pairwise 50 5 0.5
-plink --bfile merged_geno_maf --extract plink.prune.in --make-bed --out merged_geno_maf_prunned
-plink --bfile merged_geno_maf_prunned --genome --min 0.05 --out relationship_raw
-sed  's/^ *//' relationship_raw.genome > relationship_tmp.tsv
-sed -r 's/ +/\t/g' relationship_tmp.tsv > relationship.tsv
-rm relationship_tmp.tsv
-
-
-plink --bfile merged --missing --out missing_stats_raw
-sed  's/^ *//' missing_stats_raw.imiss > missing_stats_tmp.tsv
-sed -r 's/ +/\t/g' missing_stats_tmp.tsv > missing_stats.tsv
-rm missing_stats_tmp.tsv
-
-Rscript ${task_dir}/filtro_parentesco_v2.R \
-${mymetadatapathology_uniq} \
-relationship.tsv \
-missing_stats.tsv \
-tabla_muestras_excluidas.tsv \
-lista_muestras_excluidas.tsv
 
 ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
@@ -694,7 +673,7 @@ cd ${path_maf}/db/${date_dir}/
 #NECESITO LA VERSION 0.2.120 de hail, hasta que en la uam no la actualicen la que hay en /lustre/local/miniconda/python-3.6/lib/python3.6/site-packages/hail-0.2.30.dist-info
 #cargo mi environment que tiene hail 0.2.120, ya me actualizaron el hail pero sigo usando mi environment de conda
 
-#ana_amil_16/06/2025 -> se supone que ya han actualizado hal 0.2.120 en la uam y lo puedo usar
+#ana_amil_16/06/2025 -> se supone que ya han actualizado hail 0.2.120 en la uam y lo puedo usar
 #ana_amil_17/06/2025 -> la version de anaconda/3.8 no es compatble con el parallel, me creo un env de conda con hail y lo ejecuto desde ahí
 
 source /home/aamil/miniconda3/bin/activate hail

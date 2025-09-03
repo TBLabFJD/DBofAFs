@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 
@@ -19,26 +18,12 @@
 #3) comprobar que despues de lo de priorizar WGS>WES>CES se hayan quedado bien los nombres  de los archivos con los repeats (habia algunos BED que no se habian renombrado junto a sus vcfs (los de los repeats)
 #por ejemplo el bed tenia repeat1 y el vcf no se le habia añadido pues lo tengo que añadir a mano -> el vcf si hay que hacer el cambio y no se ha editado dentro hay que hacer lo mismo que en el punto 1
 #4) revisar la metadata justo antes de la base de datos (MAFdb) y comprobar que los que se quedan despues del plink estan todos en el excel de la metadata (esto me fallo en su momento
-#porque habia una muestra que era 19-0065b y se habia quitado la 19-0065 y la b no estaba en la metadata. Si no tambien podria haber renombrado esta "b" como 19-0065 tal cual y solo se habria renombrado el repeat 
+#porque habia una muestra que era 19-0065b y se habia quitado la 19-0065 y la b no estaba en la metadata. Si no tambien podria haber renombrado esta "b" como 19-0065 tal cual y solo se habria renombvrado el repeat 
 #con la base de datos sola, lo unico importante es que las fechas tienen que ser diferentes (las de la coletilla de los filenames)
 #5) ASEGURARSE QUE MACHEAN LAS FECHAS DEL BED CON SU VCF CORRESPONDIENTE!!!
 #6) los imputed hay que hacerlos en dos tandas porque no hay almacenamiento suficiente para correr los 26 o mas trozos de golpe
 #7) reorganizar la pipeline para que se haga el merged y el imputed y luego la base de datos y por ultimo corregir los archivos de los repeats de quitarles la coletilla
 # a sus vcfs en el filename, dentro y en el bed 
-
-######### SOLUCION VARIANTES DUPLICADAS EN LA BASE DE DATOS (ARCHIVO MAFbd) -> ANA AMIL 3/09/2025
-#1) Una vez obtenido el archivo de la base de datos es importante comprobar que no tenga ninguna variante duplicada con distintos datos de frecuencias. 
-# Utilizar el comando: zgrep -v "#" MAFbd_....vcf.gz | cut -f1,2,4,5 --output-delimiter="_" | sort | uniq -d
-# Aparecen duplicadas porque existen otras variantes en posiciones cercanas que se solapan, el problema es que al hacer el split de las variantes y recalcular el AN y AC no las considera iguales.
-#2) Hay que detectar que pacientes tienen las variantes solapantes (las que se encuentran en posiciones cercanas y no se separan correctamente) y modificar el archivo vcf original
-#3) Para modificar el vcf de cada paciente se debe utilizar el comando: 
-##bcftools norm -m -any --force -f /home/proyectos/bioinfo/fjd/references/hg38/hg38.fa.gz --check-ref w -o ${path archivo vcf salida} -O z ${path archivo vcf de paciente de entrada}
-##tabix -p vcf ${path archivo vcf salida}
-# Lo que hace es separar las variantes multialélicas y ajusta las posiciones de estas si es necesario: EJEMPLO -> la nomenclatura de arriba cambia a la de abajo
-## -	chr15	22552438	CTA	A,CTC	GT:AD:DP:GQ:PL	1/2:0,3,2:5:44:78,45,158,44,0,105
-## -	chr15	22552440	A	C	GT:AD:DP:GQ:PL	0/1:0,2:5:44:78,44,105
-#4) Utilizar los archivos modificados de esos pacientes como entrada para la base de datos y comprobar de nuevo que no existen variantes duplicadas
-
 
 ########## PARTE 2 TEMA SPLITS
 # NOS HACE FALTA LA VERSION DE BCFTOOLS 1.21 (EN VEZ DE LA 1.16 QUE SE CARGA EN LA UAM CON module load bcftools). NECESITAMOS LA 1.21 POR 2 RAZONES: 
@@ -88,10 +73,10 @@ export JAVA_OPTS="-Djava.io.tmpdir=${TMPDIR}"
 ##### ana_amil -> 16/06/2025 : hay que rellenar los paths de donde tenemos las cosas
 ## el data base path es TODA la carpeta donde esta db, vcfs, metadata... SIN BARRA AL FINAL
 # Data base path
-path_maf="/lustre/NodoBIO/bioinfo/NOBACKUP/aamil/PRUEBAS_BD/prueba_dir_inicio_bd_con_INO80"
+path_maf="/lustre/NodoBIO/bioinfo/NOBACKUP/aamil/PRUEBAS_BD/prueba_bd_merge_con_INO80_arreglo_duplicados"
 
 # TSV file with sample-pathology information: ANTES SE PONIAN TSVs ahora yo pongo archivos de texto .txt
-mymetadatapathology_uniq="/lustre/NodoBIO/bioinfo/NOBACKUP/aamil/PRUEBAS_BD/prueba_dir_inicio_bd_con_INO80/metadata/metadata.txt" # el normal
+mymetadatapathology_uniq="/lustre/NodoBIO/bioinfo/NOBACKUP/aamil/PRUEBAS_BD/prueba_bd_merge_con_INO80_arreglo_duplicados/metadata/metadata.txt" # el normal
 
 # Task directory del github
 task_dir="/home/proyectos/bioinfo/NOBACKUP/aamil/DBofAFs/tasks"
@@ -99,9 +84,8 @@ task_dir="/home/proyectos/bioinfo/NOBACKUP/aamil/DBofAFs/tasks"
 date_paste="$(date +"%Y_%m_%d")"
 date_dir="date_${date_paste}"
 
-# ana amil 03/09/2025 -> mkdir -p para que no de error si el directorio ya está creado
 mkdir "${path_maf}/metadata/${date_dir}"
-mkdir -p "${path_maf}/tmp"
+mkdir "${path_maf}/tmp"
 mkdir "${path_maf}/tmp/covFiles/"
 mkdir "${path_maf}/tmp/hail/"
 
@@ -522,8 +506,6 @@ echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
 
 
 
-
-
 #================================#
 # PLINK relationship calculation #
 #================================#
@@ -532,301 +514,8 @@ echo "PLINK RELATIONSHIP CALCULATION" >> ${path_maf}/metadata/${date_dir}/logfil
 STARTTIME=$(date +%s)
 echo "PLINK RELATIONSHIP CALCULATION"
 
-mkdir -p ${path_maf}/tmp/plinkout
+mkdir ${path_maf}/tmp/plinkout
 cd ${path_maf}/tmp/plinkout
 bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o imputed_${date_paste}_ID_tmp.vcf.gz -O z ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz
 
-geno=0.05
-maf=0.05
 
-
-plink --vcf imputed_${date_paste}_ID_tmp.vcf.gz --make-bed --out merged
-##lineas nuevas: hay que filtrar primero las 4 y pico millones de variantes con el bed del CES de sofia, para que asi para hacer el prunning y tal ya se "centre" en filtrar las variantes del CES
-## esto lo hacemos asi porque el 95% de las muestras son CES y asi para sacar las relaciones del pi_hat y tal se hacen en base a las posiciones cubiertas que son las del CES de Sophia aprox
-## 
-##ana amil 20/06/2025 -> al utlizar solo paneles no es necesario que busque parentesco en los genes de CES, compara entre todos los genes de los vcf sin filtro.
-##Pruebo con el archivo .bed de paneles
-##plink --bfile merged --extract range /lustre/NodoBIO/bioinfo/fjd/beds/CES_v3_hg38_target.chr.formatted.sorted.annotated.bed --make-bed --out merged_filtered
-#plink --bfile merged --extract range /lustre/NodoBIO/bioinfo/ybenitez/AOsorio_analysis/beds/probes4cnvs.bed --make-bed --out merged_filtered
-##ana amil 16/07/2025 -> para todas las muestras de cancer, el plink solo funiona si no se le da un archivo .bed
-plink --bfile merged --make-bed --geno ${geno} --mind 1 --maf ${maf} --out merged_geno_maf
-## fin lineas nuevas
-plink --bfile merged_geno_maf --geno ${geno} --mind 1 --maf ${maf} --indep-pairwise 50 5 0.5
-plink --bfile merged_geno_maf --extract plink.prune.in --make-bed --out merged_geno_maf_prunned
-plink --bfile merged_geno_maf_prunned --genome --min 0.05 --out relationship_raw
-sed  's/^ *//' relationship_raw.genome > relationship_tmp.tsv
-sed -r 's/ +/\t/g' relationship_tmp.tsv > relationship.tsv
-rm relationship_tmp.tsv
-
-
-plink --bfile merged --missing --out missing_stats_raw
-sed  's/^ *//' missing_stats_raw.imiss > missing_stats_tmp.tsv
-sed -r 's/ +/\t/g' missing_stats_tmp.tsv > missing_stats.tsv
-rm missing_stats_tmp.tsv
-
-Rscript ${task_dir}/filtro_parentesco_v2.R \
-${mymetadatapathology_uniq} \
-relationship.tsv \
-missing_stats.tsv \
-tabla_muestras_excluidas.tsv \
-lista_muestras_excluidas.tsv
-
-ENDTIME=$(date +%s)
-echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" 
-
-
-#==============================================#
-# Making the definitive merge and imputed vcfs #
-#==============================================#
-
-echo "MAKING THE DEFINITIVE MERGED AND IMPUTED VCFs" >> ${path_maf}/metadata/${date_dir}/logfile.txt
-STARTTIME=$(date +%s)
-echo "MAKING THE DEFINITIVE MERGED AND IMPUTED VCFs"
-
-mkdir "${path_maf}/merged_vcf/${date_dir}"
-mkdir "${path_maf}/imputed_vcf/${date_dir}"
-#ana amil 20/06/2025 -> mkdir -p para que no de error si el directorio ya existe
-mkdir -p "${path_maf}/individual_vcf/discarded_vcf_tmp"
-mkdir -p "${path_maf}/coverage/discarded_bed_tmp"
-
-# Moving individual vcf and bed files from related samples to the discarded folders
-
-if [[ $(cat ${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv | wc -l) == 0 ]]
-then
-	mv ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz ${path_maf}/imputed_vcf/${date_dir}/PREimputed_${date_paste}.vcf.gz 
-	mv ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/merged_vcf/${date_dir}/PREmerged_${date_paste}.vcf.gz 
-else
-
- # QUITAR COLUMNA GENOTIPO DE MIS SAMLES EXLCUIDOS Y QUITAR LA COLETILLA DEL REPEAT, DE LAS MUESTRAS QUE SE QUEDAN
-  #In summary, these commands are removing the genotype column de las muestras que excluimos y ademas LUEGO quitando la coletilla de: repeat1..., repeat2... que quedan en la columna del genotipo, debe ser un solo repeat por 
-  # ADN lo que se deja dentro porque si no al quitar la coletilla habria 2 (ejemplo repeat100-000 y repeat200-000, si en exluidas no esta alguna de las dos entonces no se van a quitar ninguna y al quitar la coletilla quedaria la meustra repetida)
-  # por eso es importante verificar que en excluidas esten todos -1 repeat de cada muestra que tiene repeats
-
-  bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/PREimputed_${date_paste}.vcf.gz
-  bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/merged_vcf/${date_dir}/PREmerged_${date_paste}.vcf.gz
-
-  tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/PREimputed_${date_paste}.vcf.gz
-  tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/PREmerged_${date_paste}.vcf.gz
-
-  ################## EN EL MERGE Y EN EL IMPUTED DEFINITIVO: HACER EL JOIN DE LAS MUTLIALELICAS Y EL RECALC
-  ######## 5 de noviembre de 2024:
-  # Ahora lo que hay que hacer es un JOIN de las multialelicas y un RECALC del AC y AN de cada variante
-  # ese sera el vcf que le pasemos despues al PLINK. IMPORTANTE: NO HACER LEFT-ALIGN PORQUE HAY VARIANTES QUE LAS PONE EN LA POSICION ANTERIOR PERO METE LA LETRA EN MINUSCULA
-  # IMPORTANTE: USAR LA VERSION 1.21 DE BCFTOOLS PARA QUE AL HACER EL JOIN SE META UN 0 EN EL GENOTIPO: EJEMPLO 0/2 EN VEZ DE ./2
-
-  #### PASO 1: JUNTAR LAS MULTIALELICAS (se mergean los genotipos de las muestras) PARA QUE SOLO HAYA UNA VARIANTE MULTIALELICA POR POSICIOn (NO VARIAS POR POSICION)
-  bcftools norm -m +any -Oz -o ${path_maf}/imputed_vcf/${date_dir}/JOIN_PREimputed_${date_paste}.vcf.gz ${path_maf}/imputed_vcf/${date_dir}/PREimputed_${date_paste}.vcf.gz
-  tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/JOIN_PREimputed_${date_paste}.vcf.gz
-
-  ### PASO 2: RECALCULAR EL AC Y AN: SI NO LO RECALCULO EL AC Y AN ESTAN MAL
-  ### esto es un plugin que por ahora no esta en la uam -> ya esta pero solo bcftools 1.16, yo quiero la 1.21
-  bcftools +fill-AN-AC -Oz -o ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz ${path_maf}/imputed_vcf/${date_dir}/JOIN_PREimputed_${date_paste}.vcf.gz
-  tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
-
-  ############# FIN DE JOIN MULTIALELICAS Y RECALC
-
-
-
-  #mover VCFS DE muestras excluidas a carpeta de discarded (tanto su vcf como su bed) es una nueva carpeta llamada discarded_tmp, en la original estan los discarded al inicio 
-	for i in $(cat ${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv);
-	do
- 		# ESTO DE INCORPORATED ES SOLO PARA CUANDO SE ACTUALICE LA BASE DE DATOS LA PROXIMA VEZ PORQUE AHORA NO HAY INCORPORATED
-		#mv ${path_maf}/individual_vcf/incorporated_vcf/${i}* ${path_maf}/individual_vcf/discarded_vcf_tmp/
-		#mv ${path_maf}/coverage/incorporated_bed/${i}* ${path_maf}/coverage/discarded_bed_tmp/
-
-		mv ${path_maf}/individual_vcf/new_vcf/${i}* ${path_maf}/individual_vcf/discarded_vcf_tmp/
-		mv ${path_maf}/coverage/new_bed/${i}* ${path_maf}/coverage/discarded_bed_tmp/
-	done
-
-  # ana amil 20/06/2025 -> poner condicional para evitar que busque repeats*.gz si no hay muestras repetidas
-	if [[ -n "$duplicates" ]]; then
-
-  # De las muestras que se llaman repeatX que se hayan quedado en new, quitarle al vcf individual todas las coletillas de repeatX que encuentre dentro de todo el vcf
-	for vcffile in ${path_maf}/individual_vcf/*/repeat*.gz; 
-	do
-		bcftools view ${vcffile} | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/individual_vcf/tmp.vcf.gz
-		mv ${path_maf}/individual_vcf/tmp.vcf.gz ${vcffile}
-	done
-
-  # De las muestras que se llaman repeatX que se han movido a discarded_vcf_tmp, quitarle al vcf individual todas las coletillas de repeatX que encuentre dentro de todo el vcf
-	for vcffile in ${path_maf}/discarded_vcf_tmp/*/repeat*.gz; 
-	do
-		bcftools view ${vcffile} | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/individual_vcf/tmp.vcf.gz
-		mv ${path_maf}/discarded_vcf_tmp/tmp.vcf.gz ${vcffile}
-	done
-
-  ### de mis repeat1, repeat2 de todos lados,RENOMBRAR los archivos: o sea quitar las coletillas de REPEAT1, REPEAT2 de los nombres de los archivos
-	for file in ${path_maf}/individual_vcf/discarded_vcf_tmp/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
-	for file in ${path_maf}/individual_vcf/new_vcf/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
-	for file in ${path_maf}/coverage/discarded_bed_tmp/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
-	for file in ${path_maf}/coverage/new_bed/repeat*; do new_file=$(basename "$file" | sed -E 's/repeat[0-9]//g'); mv "$file" "$(dirname "$file")/$new_file"; done
-	
-	fi
-fi
-
-
-ENDTIME=$(date +%s)
-echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" 
-
-#===================#
-# Database creation #
-#===================#
-
-echo "DATABASE CREATION" >> ${path_maf}/metadata/${date_dir}/logfile.txt
-STARTTIME=$(date +%s)
-echo "DATABASE CREATION" 
-
-mkdir "${path_maf}/db/${date_dir}"
-
-cd ${path_maf}/db/${date_dir}/
-
-
-#python3 ${task_dir}/callMAF.py \
-#--multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
-#--pathology ${mymetadatapathology_uniq} \
-#--mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
-#--samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
-
-#NECESITO LA VERSION 0.2.120 de hail, hasta que en la uam no la actualicen la que hay en /lustre/local/miniconda/python-3.6/lib/python3.6/site-packages/hail-0.2.30.dist-info
-#cargo mi environment que tiene hail 0.2.120, ya me actualizaron el hail pero sigo usando mi environment de conda
-
-#ana_amil_16/06/2025 -> se supone que ya han actualizado hal 0.2.120 en la uam y lo puedo usar
-#ana_amil_17/06/2025 -> la version de anaconda/3.8 no es compatble con el parallel, me creo un env de conda con hail y lo ejecuto desde ahí
-
-source /home/aamil/miniconda3/bin/activate hail
-
-python3 ${task_dir}/supersub_callMAF.py \
---multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
---pathology ${mymetadatapathology_uniq} \
---mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
---tmpdir ${TMPDIR} \
---samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
-
-conda deactivate 
-
-python ${task_dir}/changeFormat.py \
---multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
---vcfout ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf \
---mafdb ${path_maf}/db/${date_dir}/MAFdb.tab \
---samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt
-
-# ana amil 25/06/2025 -> eliminar la columna de FORMAT del header para que luego no de error al set ID column
-sed '/^#CHROM/ s/\tFORMAT//' MAFdb_AN20_${date_paste}.vcf > tmp.vcf && mv tmp.vcf MAFdb_AN20_${date_paste}.vcf
-
-bgzip -c ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf > ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
-tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
-
-
-
-
-################## EN EL MERGE DEFINITIVO: HACER EL JOIN DE LAS MUTLIALELICAS Y EL RECALC
-######## 5 de noviembre de 2024:
-# Ahora lo que hay que hacer es un JOIN de las multialelicas y un RECALC del AC y AN de cada variante
-# ese sera el vcf que le pasemos despues al PLINK. IMPORTANTE: NO HACER LEFT-ALIGN PORQUE HAY VARIANTES QUE LAS PONE EN LA POSICION ANTERIOR PERO METE LA LETRA EN MINUSCULA
-# IMPORTANTE: USAR LA VERSION 1.21 DE BCFTOOLS PARA QUE AL HACER EL JOIN SE META UN 0 EN EL GENOTIPO: EJEMPLO 0/2 EN VEZ DE ./2
-
-#### PASO 1: JUNTAR LAS MULTIALELICAS (se mergean los genotipos de las muestras) PARA QUE SOLO HAYA UNA VARIANTE MULTIALELICA POR POSICIOn (NO VARIAS POR POSICION)
-bcftools norm -m +any -Oz -o ${path_maf}/merged_vcf/${date_dir}/JOIN_PREmerged_${date_paste}.vcf.gz ${path_maf}/merged_vcf/${date_dir}/PREmerged_${date_paste}.vcf.gz
-tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/JOIN_PREmerged_${date_paste}.vcf.gz
-
-### PASO 2: RECALCULAR EL AC Y AN: SI NO LO RECALCULO EL AC Y AN ESTAN MAL
-### esto es un plugin que por ahora no esta en la uam -> ya esta pero solo bcftools 1.16, yo quiero la 1.21
-bcftools +fill-AN-AC -Oz -o ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz ${path_maf}/merged_vcf/${date_dir}/JOIN_PREmerged_${date_paste}.vcf.gz
-tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
-
-############# FIN DE JOIN MULTIALELICAS Y RECALC
-
-
-
-
-
-
-
-
-#######GUR: añadir lo del ID para que se creen bien las columnas de la base de datos 
-
-cd ${path_maf}/db/${date_dir}
-
-#1) BASE DE DATOS: SET ID COLUMN: y ademas crearle su .tbi INDEX -> A LA BASE DE DATOS
-### OJO: 27/02/2025 -> por lo que sea esto a secas no funciona porque dice que el campo del FORMAT esta mal, hay que correrlo exactamente igual que pone aqui pero usando una version mas antigua de bcftools
-#module load bcftools/1.10 -> es decir para lo de antes era la 1.21 pero para anotar el ID bien hay que usar la 1.10
-# ana amil 25/06/2025 -> no hace falta la version de bcftools 1.10, el error está en que no elimina el apartado FORMAT del header, por tanto tiene 9 elementos en la cabecera y 8 en el cuerpo de la tabla. Esta solucionado ya arriba
-bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o MAFdb_AN20_${date_paste}_ID.vcf.gz -O z MAFdb_AN20_${date_paste}.vcf.gz
-tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
-
-## 2) HACER EL SPLIT DE MULTIALLELICAS A BIALELICAS, TABIX y luego HACERLE EL SAMPLE ID Y TABIX al vcf del ID -> se necesita para hacer bien las queries
-# hace falta bcftools 1.21 para el --force
-#bcftools norm -m -any --force -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
-
-####  15/01/2025 LA LINEA DE LA 728 ESTA BIEN, PERO HAY QUE AÑADIR EL CHECK REF PARA QUE LAS VARIANTES TIPO: CAGA>C,AAGA las separe: CAGA>C y CAGA>AAGA Y LUEGO CORRIJA LAS QUE SON "largas"
-# POR EJEMPLO CAGA>AAGA LA CORRIGE EN C>A ESTO NO ES LO MISMO QUE HACER LEFT ALIGN
-# la w es para hacer un warning de que la referencia no machea
-##ana amil 20/06/2025 -> la ruta al hg38.fa era de tblab y no de la uam (/mnt/genetica7/references/hg38.fa)
-bcftools norm -m -any --force -f /home/proyectos/bioinfo/fjd/references/hg38/hg38.fa.gz --check-ref w -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
-tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
-
-
-# este es el original pero no funciona ahora para el merged porque al hacer el join el campo de PL de la columna de INFO no esta bien, hay que hacer --force en bcftools 1.21
-#bcftools norm -m- ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z
-#tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
-
-###no me hace falta la columna ID porque en R ya pega el ID cuando se hace las queries de variantes
-#bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
-#tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}_ID.vcf.gz
-
-#3) MERGED_LIMPIO: SET ID COLUMN: y ademas crearle su .tbi INDEX -> AL MERGED LIMPIO -> ESTO ES OPTATIVO PERO LO NECESITO PARA LAS QUERIES DE LA BASE DE DATOS
-
-#bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}_ID.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
-#tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}_ID.vcf.gz
-
-#4) IMPUTED_LIMPIO: SET ID COLUMN: y ademas crearle su .tbi INDEX -> AL IMPUTED LIMPIO -> OPTATIVO MUY -> no se necesita para nada por ahora
-
-#bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}_ID.vcf.gz -O z ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
-#tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}_ID.vcf.gz
-
-
-
-ENDTIME=$(date +%s)
-echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" 
-
-
-
-#========================================#
-# Moving files and removing tmp diectory #
-#========================================#
-
-
-# Moving log and tsv files from the relationship PLINK test to the metadata directory
-mkdir ${path_maf}/metadata/${date_dir}/plinkout
-mv ${path_maf}/tmp/plinkout/*in ${path_maf}/metadata/${date_dir}/plinkout
-mv ${path_maf}/tmp/plinkout/*out ${path_maf}/metadata/${date_dir}/plinkout
-mv ${path_maf}/tmp/plinkout/*log ${path_maf}/metadata/${date_dir}/plinkout
-mv ${path_maf}/tmp/plinkout/*tsv ${path_maf}/metadata/${date_dir}/plinkout
-
-# Removing tmp directory
-# rm -r ${path_maf}/tmp/
-# rm -r ${path_maf}/individual_vcf/tmp_vcf/
-
-# Moving the new samples to the incorporated -> o sea todas vuelven a estar en incorporated hasta la siguiente base de datos
-mv ${path_maf}/individual_vcf/new_vcf/* ${path_maf}/individual_vcf/incorporated_vcf/
-mv ${path_maf}/coverage/new_bed/* ${path_maf}/coverage/incorporated_bed/
-
-# Moving temporal discarded samples to discarded and remove folder
-mv ${path_maf}/individual_vcf/discarded_vcf_tmp/* ${path_maf}/individual_vcf/discarded_vcf/
-mv ${path_maf}/coverage/discarded_bed_tmp/* ${path_maf}/coverage/discarded_bed/
-#rm -r ${path_maf}/individual_vcf/discarded_vcf_tmp
-#rm -r ${path_maf}/coverage/discarded_bed_tmp
-
-
-echo "FINAL:" >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo $(date) >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
-echo "FINAL:"
-echo $(date)
-#'
