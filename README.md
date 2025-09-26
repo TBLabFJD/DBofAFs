@@ -6,16 +6,18 @@ DBofAFs source code is provided under the [**Creative Commons Attribution-NonCom
 
 ## Developers
 ### Main developers
+ - Graciela Uría Regojo
  - Gonzalo Núñez Moreno
  - Ionut-Florin Iancu
  - Lorena de la Fuente Lorente
 
 ### Collaborators
+ - Yolanda Benítez
  - Raquel Romero Fernández
- - Pablo Mínguez Paniagua
+ - Pablo Mínguez
 
 ### Contact
- - Gonzalo Núñez Moreno (gonzalo.nunezm@quironsalud.es)
+ - Graciela Uría regojo (graciela.uria@iis-fjd.es)
 
 [![Licencia de Creative Commons](https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png)](http://creativecommons.org/licenses/by-nc-sa/4.0/)
 
@@ -73,7 +75,6 @@ ADN	FAMILY	SAMPLE	TAG	tag	GENERAL	CATEGORY	SUBCATEGORY
 ***Directory structure***
 The database directory must have the following directories created before running the pipeline:
 
-**IMPORTANTISIMOOOO**: hay que poner merged_vcf no merged_vcfs en el nombre de la carpeta (originalmente pone merged_vcfs y no es así)
 ```
 └─coverage
 │   discarded_bed
@@ -91,3 +92,5 @@ The database directory must have the following directories created before runnin
 └─metadata
 ```
 Input VCF files must be copied into `individual_vcf/new_vcf/` directory and BED files with coverage information for each sample in `coverage/new_bed/`. This coverage files can be created using mosdepth: `mosdepth --quantize 10: -n -x ${output_prefix} ${bamfile}` to create a bed file with the regions captured with a depth equal or higher than 10 reads. Samples names from the VCF are retrieved from the header of the file. BED file should follow this naming `[SAMPLEID]_*.bed or [SAMPLEID].*.bed` .
+
+**IMPORTANT**: Name directory as merged_vcf (no merged_vcfs).
