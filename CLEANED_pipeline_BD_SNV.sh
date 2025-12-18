@@ -711,6 +711,9 @@ tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/JOIN_PREmerged_${date_paste}.vcf
 bcftools +fill-AN-AC -Oz -o ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz ${path_maf}/merged_vcf/${date_dir}/JOIN_PREmerged_${date_paste}.vcf.gz
 tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 
+###PASO 3: HACER EL SPLIT DE MULTIALLELICAS A BIALELICAS, TABIX y luego HACERLE EL SAMPLE ID Y TABIX al vcf del ID -> se necesita para hacer bien las queries de getVarfreq_3.0.sh
+# mirar lo de check ref de abajo
+
 ############# FIN DE JOIN MULTIALELICAS Y RECALC
 
 
@@ -739,6 +742,12 @@ tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}_ID.vcf.gz
 # la w es para hacer un warning de que la referencia no machea
 bcftools norm -m -any --force -f /mnt/genetica7/references/hg38.fa --check-ref w -o ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz -O z ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 #tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/split_multi_merged_${date_paste}.vcf.gz
+
+### 18/12/2025
+#para el vcf imputed tambien habria que hacer lo de check ref de cara a las queries. En el algoritmo de busqueda de candidate genes lo que hace es coger el imputed que tiene las variantes juntas y corre el check ref (mirar en tblab)
+#pero no esta de mas que yo ya corra eso para todo el archivo y ya lo use (para el shapeit esta bien que use el check ref, le estamos dando las variantes spiteadas y bien escritas
+#bcftools norm -m -any --force -f /mnt/genetica7/references/hg38.fa --check-ref w -o ${path_maf}/imputed_vcf/${date_dir}/split_multi_imputed_${date_paste}.vcf.gz -O z ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz
+#tabix -p vcf ${path_maf}/imputed_vcf/${date_dir}/split_multi_imputed_${date_paste}.vcf.gz
 
 
 # este es el original pero no funciona ahora para el merged porque al hacer el join el campo de PL de la columna de INFO no esta bien, hay que hacer --force en bcftools 1.21
