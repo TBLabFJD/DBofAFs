@@ -686,6 +686,10 @@ python ${task_dir}/changeFormat.py \
 --samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt
 
 
+# ana se dio cuenta de esto, hay que probarlo 
+# ana amil 25/06/2025 -> eliminar la columna de FORMAT del header para que luego no de error al set ID column
+# sed '/^#CHROM/ s/\tFORMAT//' ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf > tmp.vcf && mv tmp.vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf
+
 bgzip -c ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf > ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
 tabix -p vcf ${path_maf}/db/${date_dir}/MAFdb_AN20_${date_paste}.vcf.gz 
 
