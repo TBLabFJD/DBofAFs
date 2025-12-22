@@ -4,6 +4,21 @@
 
 ############## IMPORTANTE PARA PROXIMA BASE DE DATOS: TEMA HACER UN SPLIT DE LAS MULTIALELICAS EN LOS SUBSETS DE LOS VCFS INDIVIDUALES
 
+## 22/12/2025
+NORMALIZACION DE LOS MOSDEPTH.BED DE ENTRADA:
+## -> Hay algunos BEDs (los de la bbdd antigua que le tuve que hacer un liftover por ejemplo) que puede que tengan posiciones que se encuentran en dos intervalos. 
+# Ejemplo: chr10	17809260	17809260 (posicion del merged_variant_position.bed) que luego esta en el BED aqui: 
+#chr10	17809191	17809732	10:inf
+#chr10	17809227	17809773	10:inf 
+#Al estar en ambas, en el momento de hacer la interseccion del merged_variant_position.bed con el bs para generar el variant_cov.txt -> sale la posicion chr10	17809260	17809260 dos veces porque la encuentra en 2 regiones
+# por ello hay que normalizar los beds de entrada de la siguiente manera:
+# module load bedtools/2.30 -> importante la version 2.30 para poder hacer -c 4 que es que incluya la ultima columna que tiene la de 10:inf
+# sort -k1,1 -k2,2n input.bed | bedtools merge -i - -c 4 -o distinct > merge_sort_output.bed 
+# y entonces asi en el momento de hacer el bedtools intersect sale bien -> mismo numero de lineas en merged_variant_position.bed y en el variant_cov.txt -> no pasa nada que el  merged_variant_position.bed tenga posiciones repetidas 
+#rollo porque tienen multialelicas (por ejemplo una posicion con 3 multialeicas y la misma posicion con otras dos multialelicas de las cuales una puede ser la misma)
+# de todos modos creo que es mejor hacer primero el 
+# bcftools norm -m + any justo desdes de hacer el merged de los subsets y por ende antes de imputar pero bueno
+
 ################################### PIPELINE DEFINITIVA PARA CREAR LA BASE DE DATOS DESDE 0 o ACTUALIZARLA. ESTA BASE DE DATOS SE CREA A PARTIR DE LOS VCFS EN LA CARPETA DE NEW_VCF. 
 ### 1) NUEVA BASE DE DATOS: SI SE ESTA CREANDO LA PRIMERA BASE DE DATOS: directamente poner todos los vcfs en new_vcf y los mosdepth en new_bed
 ### 2) ACTUALIZACION BASE DE DATOS: SI SE ESTAN CREANDO SUCESIVAS BASES DE DATOS A PARTIR DE UNA QUE YA HABIA:  mover los vcfs de incorporated_vcf a new_vcf y los incorporated_bed a new_bed y juntarlos con los nuevos que estemos metiendo
@@ -340,17 +355,8 @@ SUBSTARTTIME=$(date +%s)
 echo "  Remove overlapping regions in new bed files"
 
 
-### a ver este codigo no tiene ningun sentido creo, porque lo que hace es quitar del bed inicial del mosdepth las regiones SOLAPANTES que tienen mas de 10 reads para que luego no salgan posiciones repetidas
-#en plan si hay un itnervalo de 3:10 - 10:inf y otro de 5:8 - 10:inf cuando se haga el intersect la poscion 6 va a salir repetida porque esta en ambos intervalos, lo unico que se supone que con este codigo quita
-# las regiones solapantes pero luego como que no lo usa o no se que hace, entonces yo estaba implementado un codigo nuevo para hacer bien el intersect 
-# basicamente cuando hace el intersect va a salir algo tipo:
-#chr10	17833520	17833520	chr10	17833379	17834191	10:inf
-#chr10	17833520	17833520	chr10	17833503	17833537	10:inf
-# Esto quiere decir que la posicion 17833520 (sale del merged_variant_position.bed) se ha detectado en dos regiones despues, con que nos quedemos la primera iteracion nos vale.
-# No hace falta filtrar diciendo "si sale en ." primero y luego sale 10:inf, en el siguiente intervalo hay que poner 10:inf, pero eso no pasa porque siempre esta en 10:in los intervalos de cada 
-#bed de partida, entonces con decir quedate la primera iteracion nos vale
 
-
+### este codigo no hace nada pero hay que hacer un sort inicial y merge de los beds, mirar arriba (o sea hay que hacerlo pero antes de empezar a construir la bbdd)
 for file in ${path_maf}/coverage/new_bed/*.bed; 
 do 
 	sort -k1,1 -k2,2n ${file} > ${path_maf}/coverage/new_bed/tmp.bed ; 
@@ -378,9 +384,10 @@ echo "  Making coverage files"
 function PL {
 	path_maf=${1}
 	filename="$(basename ${2})"
-	#bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${2} | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt
+	#ORIGINAL y 22/12/2025: recupero este codigo original de gonzalo porque esta bien pero hay que acordarse de hacer un sort y merge de los beds iniciales para que esto funcione (mirar arriba del todo)
+	bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${2} | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt
  	# GUR 23 DE OCTUBRE: este es el bueno de quitar las posciones repetidas que esten dos veces en dos intervalos y dejar solo la primera interaccion
-	bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${2} | awk '!seen[$1, $2, $3]++' | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt
+	#bedtools intersect -f 1.0 -loj -a ${path_maf}/tmp/merged_variant_position.bed -b ${2} | awk '!seen[$1, $2, $3]++' | awk '{print $NF}' > ${path_maf}/tmp/covFiles/${filename}_variantCov.txt
 
 } 
 
