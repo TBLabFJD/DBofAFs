@@ -2,7 +2,15 @@
 #!/bin/bash
 
 
-############## IMPORTANTE PARA PROXIMA BASE DE DATOS: TEMA HACER UN SPLIT DE LAS MULTIALELICAS EN LOS SUBSETS DE LOS VCFS INDIVIDUALES
+############## IMPORTANTE PARA PROXIMA BASE DE DATOS: NORMALIZACION VCFS DE ENTRADA: HACER UN SPLIT DE LAS MUTIALELICAS EN LOS VCFS INDIVIDUALES -> QUE SE CORRA CON EL PARAMETRO -checkref DE BCFTOOLS NORM PARA QUE SI TIENE QUE CORREGIR 
+# ALGUNA VARIANTE QUE TENGA QUE IR EN UNA POSICION ANTERIOR QUE NO PONGA MINUSCULAS EN LA REFERECIA (ESTO LO HACE CUANDO EL COMANDO NO TIENEN UN GENOMA DE REFRENCIA PARA MIRAR QUE NUCLEOTIDOS SON LAS POSICIONES ANTERIORES
+# OTRO DATO QUE IGUAL TIENE MAS SENTIDO ES: SI NO SE HACE LA NORMALIZACION DE LOS VCFS INDIVIDUALES SE PODRIA PLANTEAR HACER UN JOIN DE LAS MULTIALELICAS JUSTO AL GENERAR EL PRIMER MERGED GRANDE -> asi si hay repes se juntan en 1 y al imputar ya no hay multialelicas y creo que se 
+#podia evitar el bcftools recalc del imputado (ademas de que obviamente se evita el join porque ya las has juntado con el merge)
+
+# otra cosa: al normalizar los beds, no esta de mas asegurarse de que no hay regiones en el cromosoma Y en las chicas -> revisar los beds de los archivos que se hicieron liftover y tambien de los nuevos, que quienes sean chicas no tengan lecturas en el Y
+# lo mismo para las variantes del vcf, que las chicas no tengan variantes en el Y (si hay lecturas mal alineadas al Y tambien habra variantes en el Y que serian falsos positivos)
+
+# otra cosa, a la hora de imputar el cromosoma Y tiene AN como si fueran dos alelos, porque si la region en un chico se imputa con 0/0 = (realmente seria 0 a secas en 1 unico alelo)
 
 ## 22/12/2025
 NORMALIZACION DE LOS MOSDEPTH.BED DE ENTRADA:
