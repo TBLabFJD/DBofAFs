@@ -12,6 +12,10 @@
 
 # otra cosa, a la hora de imputar el cromosoma Y tiene AN como si fueran dos alelos, porque si la region en un chico se imputa con 0/0 = (realmente seria 0 a secas en 1 unico alelo)
 
+# otra cosa: tuve un fallo gordo y es que al normalizar los beds en un inicio sin querer les borre a todos los WES+WGS+ CES antiguos liftoverados las regiones del chr3-chr9 -> para evitar este (gran) error al terminar de generar la base de datos
+# esta bien hacer: un summary(BBDD$AN) -> ver los quartiles y que valores de AN hay, tanto el Q1, como la mediana, como el 3er quartil tienen que tener un minimo AN de numero de WGS*2 -> que todas las variantes esten cubiertas (10 o mas lecturas)
+# en los WGS por lo menos
+
 ## 22/12/2025
 NORMALIZACION DE LOS MOSDEPTH.BED DE ENTRADA:
 ## -> Hay algunos BEDs (los de la bbdd antigua que le tuve que hacer un liftover por ejemplo) que puede que tengan posiciones que se encuentran en dos intervalos. 
