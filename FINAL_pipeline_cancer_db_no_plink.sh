@@ -46,7 +46,11 @@
 # Lo que hace es separar las variantes multialélicas y ajusta las posiciones de estas si es necesario: EJEMPLO -> la nomenclatura de arriba cambia a la de abajo
 ## -	chr15	22552438	CTA	A,CTC	GT:AD:DP:GQ:PL	1/2:0,3,2:5:44:78,45,158,44,0,105
 ## -	chr15	22552440	A	C	GT:AD:DP:GQ:PL	0/1:0,2:5:44:78,44,105
-#4) Utilizar los archivos modificados de esos pacientes como entrada para la base de datos y comprobar de nuevo que no existen variantes duplicadas
+# El programa bcftools, al separar las variantes, indica cuales ha modificado poniéndolas en minúscula. 
+#4) Hay que modificar los alelos de referencia y alternativos a mayúscula en los vcf de los pacientes: 
+##zcat <input.vcf.gz> | awk 'BEGIN{OFS="\t"} /^#/ {print; next} { $4=toupper($4); $5=toupper($5); print }' | bgzip > <output.vcf.gz>
+##tabix -p vcf <output.vcf.gz>
+#5) Utilizar los archivos modificados de esos pacientes como entrada para la base de datos y comprobar de nuevo que no existen variantes duplicadas
 
 
 ########## PARTE 2 TEMA SPLITS
@@ -97,10 +101,10 @@ export JAVA_OPTS="-Djava.io.tmpdir=${TMPDIR}"
 ##### ana_amil -> 16/06/2025 : hay que rellenar los paths de donde tenemos las cosas
 ## el data base path es TODA la carpeta donde esta db, vcfs, metadata... SIN BARRA AL FINAL
 # Data base path
-path_maf="/lustre/NodoBIO/bioinfo/NOBACKUP/aamil/PRUEBAS_BD/prueba_dir_inicio_bd_con_INO80"
+path_maf="/lustre/NodoBIO/bioinfo/NOBACKUP/aamil/PRUEBAS_BD/BD_definitiva"
 
 # TSV file with sample-pathology information: ANTES SE PONIAN TSVs ahora yo pongo archivos de texto .txt
-mymetadatapathology_uniq="/lustre/NodoBIO/bioinfo/NOBACKUP/aamil/PRUEBAS_BD/prueba_dir_inicio_bd_con_INO80/metadata/metadata.txt" # el normal
+mymetadatapathology_uniq="/lustre/NodoBIO/bioinfo/NOBACKUP/aamil/PRUEBAS_BD/BD_definitiva/metadata/metadata.txt" # el normal
 
 # Task directory del github
 task_dir="/home/proyectos/bioinfo/NOBACKUP/aamil/DBofAFs/tasks"
