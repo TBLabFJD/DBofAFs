@@ -18,7 +18,7 @@
 # en los WGS por lo menos
 
 ## 22/12/2025
-NORMALIZACION DE LOS MOSDEPTH.BED DE ENTRADA:
+# NORMALIZACION DE LOS MOSDEPTH.BED DE ENTRADA:
 ## -> Hay algunos BEDs (los de la bbdd antigua que le tuve que hacer un liftover por ejemplo) que puede que tengan posiciones que se encuentran en dos intervalos. 
 # Ejemplo: chr10	17809260	17809260 (posicion del merged_variant_position.bed) que luego esta en el BED aqui: 
 #chr10	17809191	17809732	10:inf
