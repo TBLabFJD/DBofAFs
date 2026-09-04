@@ -112,9 +112,8 @@ module load R/R
 source ~/.Renviron
 module load bcftools/1.21
 
-#path graciela java 8: nuevo path -> actualizado el 20 abril 2024
+#04/09/2026: path graciela java 8: nuevo path -> actualizado el 20 de agosto 2026
 ## IMPORTANTE: verificar que el java 8 sea este path, porque en la UAM lo actualizan cada x meses y este path hay que ir cambiandolo
-#04/09/2026: actualizo el java de la UAM, ultima version que la cargaron el 20/08/2026
 export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.504.b01-1.1.el8_10.x86_64/jre/bin:$PATH
 
 # A VER SI CONSIGO MODIFICAR EL TMP DIR DE JAVA DE UNA VEZ -> necesario porque el /tmp/ de la UAM esta petado y hay que redirigir el tmp al tmp del nodo de calculo haciendo export TMPDIR y tal al nodo de calculo
