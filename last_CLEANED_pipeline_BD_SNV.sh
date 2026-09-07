@@ -7,6 +7,7 @@
 # ALGUNA VARIANTE QUE TENGA QUE IR EN UNA POSICION ANTERIOR QUE NO PONGA MINUSCULAS EN LA REFERECIA (ESTO LO HACE CUANDO EL COMANDO NO TIENEN UN GENOMA DE REFRENCIA PARA MIRAR QUE NUCLEOTIDOS SON LAS POSICIONES ANTERIORES
 # OTRO DATO QUE IGUAL TIENE MAS SENTIDO ES: SI NO SE HACE LA NORMALIZACION DE LOS VCFS INDIVIDUALES SE PODRIA PLANTEAR HACER UN JOIN DE LAS MULTIALELICAS JUSTO AL GENERAR EL PRIMER MERGED GRANDE -> asi si hay repes se juntan en 1 y al imputar ya no hay multialelicas y creo que se 
 #podia evitar el bcftools recalc del imputado (ademas de que obviamente se evita el join porque ya las has juntado con el merge)
+# todo esto mirar abajo el comando que usa Ana para left align y split las multialelicas ( SOLUCION VARIANTES DUPLICADAS EN LA BASE DE DATOS (ARCHIVO MAFbd)) , tambien se explica todo esto en AFquery de Dani
 
 # otra cosa: al normalizar los beds, no esta de mas asegurarse de que no hay regiones en el cromosoma Y en las chicas -> revisar los beds de los archivos que se hicieron liftover y tambien de los nuevos, que quienes sean chicas no tengan lecturas en el Y
 # lo mismo para las variantes del vcf, que las chicas no tengan variantes en el Y (si hay lecturas mal alineadas al Y tambien habra variantes en el Y que serian falsos positivos)
