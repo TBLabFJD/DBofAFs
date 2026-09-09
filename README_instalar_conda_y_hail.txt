@@ -1,3 +1,6 @@
+
+probando mar
+
 # todo desde nodo login uam
 cd /home/cserrano
 
