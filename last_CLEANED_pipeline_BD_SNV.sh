@@ -126,15 +126,15 @@ export JAVA_OPTS="-Djava.io.tmpdir=${TMPDIR}"
 ##### GUR: hay que rellenar los paths de donde tenemos las cosas
 ## el data base path es TODA la carpeta donde esta db, vcfs, metadata... SIN BARRA AL FINAL
 # Data base path
-path_maf=""
+path_maf="/home/proyectos/bioinfo/NOBACKUP/margon/MAR_PRUEBAS/prueba_bd_cancer"
 #path_maf="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs"
 
 # TSV file with sample-pathology information: ANTES SE PONIAN TSVs ahora yo pongo archivos de texto .txt
-mymetadatapathology_uniq="" # el normal
+mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/margon/MAR_PRUEBAS/prueba_bd_cancer/metadata/metadata.txt" # el normal
 #mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/all_FJD.txt" #varias cat y varias subcat TODOS CES Y WGS Y WES
 
 # Task directory del github
-task_dir=""
+task_dir="/home/proyectos/bioinfo/NOBACKUP/margon/DBofAFs/tasks"
 #task_dir="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks"
 
 date_paste="$(date +"%Y_%m_%d")"
@@ -478,7 +478,7 @@ function IMPUTE {
 	bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n ${numrows} > ${path_maf}/tmp/${iname}_imputed.vcf
 
 	#python ${task_dir}/imputeValues.py \
-  	python /home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/DBofAFs/tasks/sub_imputeValues.py \
+  	python /home/proyectos/bioinfo/NOBACKUP/margon/DBofAFs/tasks/sub_imputeValues.py \
 	--mergedvcf ${path_maf}/tmp/${iname}_merged.vcf.gz \
 	--skiprows ${skiprows} \
 	--imputedvcf ${path_maf}/tmp/${iname}_imputed.vcf \
