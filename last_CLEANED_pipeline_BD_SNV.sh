@@ -730,7 +730,7 @@ cd ${path_maf}/db/${date_dir}/
 
 #NECESITO LA VERSION 0.2.120 de hail, hasta que en la uam no la actualicen la que hay en /lustre/local/miniconda/python-3.6/lib/python3.6/site-packages/hail-0.2.30.dist-info
 #cargo mi environment que tiene hail 0.2.120, ya esta disponible hail 02.120 en la uam pero no es compatible con parallel asi que seguir usando environment de conda
-source /home/graciela/anaconda3/bin/activate hail
+source /home/margon/miniconda3/bin/activate hail
 
 python3 ${task_dir}/supersub_callMAF.py \
 --multivcf ${path_maf}/imputed_vcf/${date_dir}/imputed_${date_paste}.vcf.gz \
@@ -739,7 +739,7 @@ python3 ${task_dir}/supersub_callMAF.py \
 --tmpdir ${TMPDIR} \
 --samplegroup ${path_maf}/db/${date_dir}/sampleGroup.txt 
 
-source /home/graciela/anaconda3/bin/deactivate
+conda deactivate
 
 
 python ${task_dir}/changeFormat.py \
