@@ -61,7 +61,7 @@
 #04/09/2026, copiado de rama: db_cancer/FINAL_pipeline_cancer_db_no_plink.sh
 ######### SOLUCION VARIANTES DUPLICADAS EN LA BASE DE DATOS (ARCHIVO MAFbd) -> ANA AMIL 3/09/2025
 #1) Una vez obtenido el archivo de la base de datos es importante comprobar que no tenga ninguna variante duplicada con distintos datos de frecuencias. 
-# Utilizar el comando: zgrep -v "#" MAFbd_....vcf.gz | cut -f1,2,4,5 --output-delimiter="_" | sort | uniq -d
+# Utilizar el comando: zgrep -v "##" MAFdb_AN20_2026_09_17_ID.vcf.gz | cut -f3 | sort | uniq -d | wc -l
 # Aparecen duplicadas porque existen otras variantes en posiciones cercanas que se solapan, el problema es que al hacer el split de las variantes y recalcular el AN y AC no las considera iguales.
 #2) Hay que detectar que pacientes tienen las variantes solapantes (las que se encuentran en posiciones cercanas y no se separan correctamente) y modificar el archivo vcf original
 #3) Para modificar el vcf de cada paciente se debe utilizar el comando: 
