@@ -123,13 +123,14 @@ export PATH=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.504.b01-1.1.el8_10.x86_64/jre/
 # A VER SI CONSIGO MODIFICAR EL TMP DIR DE JAVA DE UNA VEZ -> necesario porque el /tmp/ de la UAM esta petado y hay que redirigir el tmp al tmp del nodo de calculo haciendo export TMPDIR y tal al nodo de calculo
 export JAVA_OPTS="-Djava.io.tmpdir=${TMPDIR}"
 
+
 ##### GUR: hay que rellenar los paths de donde tenemos las cosas
 ## el data base path es TODA la carpeta donde esta db, vcfs, metadata... SIN BARRA AL FINAL
 # Data base path
 path_maf="/home/proyectos/bioinfo/NOBACKUP/margon/MAR_PRUEBAS/prueba_bd_cancer"
 #path_maf="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs"
 
-# TSV file with sample-pathology information: ANTES SE PONIAN TSVs ahora yo pongo archivos de texto .txt
+# TSV file with sample-pathology information (metadata.txt): ANTES SE PONIAN TSVs ahora yo pongo archivos de texto .txt
 mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/margon/MAR_PRUEBAS/prueba_bd_cancer/metadata/metadata.txt" # el normal
 #mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/all_FJD.txt" #varias cat y varias subcat TODOS CES Y WGS Y WES
 
@@ -140,18 +141,19 @@ task_dir="/home/proyectos/bioinfo/NOBACKUP/margon/DBofAFs/tasks"
 date_paste="$(date +"%Y_%m_%d")"
 date_dir="date_${date_paste}"
 
+# Se crean los directorios necesarios 
 #04/09/2026: ana amil 03/09/2025 -> mkdir -p para que no de error si el directorio ya está creado
 mkdir "${path_maf}/metadata/${date_dir}"
 mkdir -p "${path_maf}/tmp"
 mkdir "${path_maf}/tmp/covFiles/"
 mkdir "${path_maf}/tmp/hail/"
 
+# Va imprimiendo en el archivo logfile los pasos que se van haciendo y la fecha/hora + imprime en pantalla (.out) lo mismo
 echo "INICIO:" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo $(date) >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "INICIO:"
 echo $(date)
-
 
 
 #================#
@@ -172,10 +174,12 @@ done
 
 ### 2) mirar cuantos CES, WES y WGS hay de cada ADN-> priorizar CES over WES y WES over WGS -> mandar a discarded las que no se usan y quedarnos con todas las files del mismo tipo priorizado: si 2 CES me quedo 2 CES, si 2 CES y 1 WGS me quedo 1 WGS etc
 ## Esto se hace para los ADNs duplicados que tengan muestras con varios tipo de secuenciacion. Ejemplo: Si el mismo ADN tiene WES y CES manda su CES a discarded, si WGS y WES manda su WES a discarded. Si 2 del mismo tipo las deja dentro juntas en new
-duplicates=$(sort "${path_maf}/metadata/${date_dir}/original_indivsample.tsv" | uniq -d)
+# uniq -d muestra los duplicados
+duplicates=$(sort "${path_maf}/metadata/${date_dir}/original_indivsample.tsv" | uniq -d) 
 #if [[ $(echo "$duplicates" | wc -l) -gt 0 ]]; then
 #esto cambiado el 17/06/2025 -> si no auqnue no haya duplicados imprime una linea 
-if [[ -n "$duplicates" ]]; then
+# -n duplicates significa: si ese fichero de duplicados no esta vacío (si contiene algo)
+if [[ -n "$duplicates" ]]; then 
     echo "Duplicate samples in batch:"
     echo "$duplicates"
 
@@ -239,7 +243,6 @@ if [[ -n "$duplicates" ]]; then
 #fi -> lo quito 04/09/2026    
 #04/09/2026: justo aqui encima habia un fi; ana lo quita porque ha hecho un else abajo por si no hay repeats, porque todo lo que sigue es relativo a los duplicados entonces realemte es parte del if hay duplicados
 
-
 ###3) Otra vez extraer lista de los sample IDS de los que se han quedado despues de quitar CES<WES<WGS -> es decir pasamos de orig_indiv_sample.tsv a indivsample.tsv
 # Iterate over all vcf.gz files in the specified directory
 for vcf in ${path_maf}/individual_vcf/new_vcf/*.vcf.gz; do
@@ -260,7 +263,7 @@ rename_files() {
 
     # Find all VCF files with the matching first 7 characters
     vcf_files=($(find "${path_maf}/individual_vcf/new_vcf" -type f -name "${sample}*.vcf.gz"))
-
+puedo usar el calldmr 
     for vcf_file in "${vcf_files[@]}"; do
         # Extract the original filename without the extension
         original_vcf_filename=$(basename "$vcf_file")
@@ -337,14 +340,15 @@ echo "MERGE" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "MERGE"
 STARTTIME=$(date +%s)
 
-# BCFTOOLS da error si hay muchos vcfs. Para prevenir el error he puesto como máximo 500 vcfs para hacer vcfs intermedios.
+# BCFTOOLS da error si hay muchos vcfs. Para prevenir el error he puesto como máximo 500 vcfs para hacer vcfs intermedios. 
+# OJO!! ahora está puesto en trocitos de 850 vcf.
 # aqui normalmente se hacia ls de lo vcfs de new_vcd y de incorporated_vcf y ya se empezaba a hacer el merged de todos ellos
 # pero eso ya no es necesario porque tanto los vcfs de incorporated como de new estan en la carpeta de new 
 ls ${path_maf}/individual_vcf/new_vcf/*.vcf.gz | split -l 850 - "${path_maf}/tmp/subset_vcfs_"
 
 function MERGED {
 
-	path_maf=${1}
+	path_maf=${1} 
 	iname="$(basename ${2})"
 
 	bcftools merge -l ${2} -O z -o ${path_maf}/tmp/merge.${iname}.vcf.gz
@@ -353,7 +357,7 @@ function MERGED {
 } 
 
 export -f MERGED
-parallel "MERGED" ::: ${path_maf} ::: ${path_maf}/tmp/subset_vcfs_*
+parallel "MERGED" ::: ${path_maf} ::: ${path_maf}/tmp/subset_vmerge.subset_vcfs_aa.vcf.gzcfs_*
 
 #EDIT GUR: ESTA LINEA DE CODIGO ESTA JUNTANDO LOS VCFS QUE SE SEPARARON ANTES. GONZALO DECIA QUE SI HABIA MÁS DE 
 #500 VCFS HABIA QUE REPARTIRLOS EN TROZOS, O SEA: si hay 1500 vcfs en la carpeta new_vcf se HARIAN 3 MERGE: merge_aa, merge_bb, merge_cc y cada uno tendria 
@@ -364,7 +368,7 @@ parallel "MERGED" ::: ${path_maf} ::: ${path_maf}/tmp/subset_vcfs_*
 # Count the number of VCFs (merge_aa, merge_bb...)
 file_count=$(ls -1 "${path_maf}/tmp/merge."*.vcf.gz 2>/dev/null | wc -l)
 if [ "$file_count" -gt 1 ]; then
-  # HAY MÁS DE 1 VCF PARA MERGE: merge_aa, merge_bb.. ORIGINALMENTE: >500 VCF rn la carpeta
+  # HAY MÁS DE 1 VCF PARA MERGE: merge_aa, merge_bb.. ORIGINALMENTE: >500 VCF en la carpeta
 	echo LINEA GONZALO 
 	bcftools merge -O z -o ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz ${path_maf}/tmp/merge.*.vcf.gz
 
@@ -392,6 +396,7 @@ echo "	Making bed file" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 SUBSTARTTIME=$(date +%s)
 echo "  Making bed file"
 
+# Se crea un bed con todas las coordenadas de referencia de las variantes presentes en el merged vcf (merged_date_tmp.vcf)
 bcftools view ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | grep -v '^#' | awk '{ print $1"\t"$2"\t"$2 }' > ${path_maf}/tmp/merged_variant_position.bed
 
 SUBENDTIME=$(date +%s)
@@ -444,6 +449,7 @@ function PL {
 
 export -f PL
 
+# Aqui aplicamos la funcion a cada uno de los beds en la carpeta new_bed
 parallel "PL" ::: ${path_maf} ::: ${path_maf}/coverage/new_bed/*.bed ${path_maf}/coverage/incorporated_bed/*.bed
 
 SUBENDTIME=$(date +%s)
@@ -452,11 +458,12 @@ echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "  Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds"
 
 
-# Runinng imputeValues.py script
-echo "	Runinng imputeValues.py script" >> ${path_maf}/metadata/${date_dir}/logfile.txt
+# Running imputeValues.py script
+echo "	Running imputeValues.py script" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 SUBSTARTTIME=$(date +%s)
-echo "  Runinng imputeValues.py script"
+echo "  Running imputeValues.py script"
 
+# Vuelve a dividir el vcf en trocitos de 450 casos
 bcftools query -l ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz | split -l 450 - "${path_maf}/tmp/subset_vcfs_merge_"
 
 function IMPUTE { 
@@ -466,12 +473,12 @@ function IMPUTE {
 
 	iname="$(basename ${filename})"
 
-	# Sepration
+	# Separation
 	bcftools view -S ${filename} --min-ac=0 -O z -o ${path_maf}/tmp/${iname}_merged.vcf.gz ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz
 	tabix -p vcf ${path_maf}/tmp/${iname}_merged.vcf.gz
 
 	# Imputation
- 	# GUR: head -n 5000 en vez de 500 porque el nuevo vcf del merged de todos los CES,WES,WGS tiene muchas mas lineas de ## en el vcf por todos los contigs y tal que dan su info de ID
+ 	# GUR: head -n 5000 en vez de 500 porque puedo usar el calldmr e el nuevo vcf del merged de todos los CES,WES,WGS tiene muchas mas lineas de ## en el vcf por todos los contigs y tal que dan su info de ID
   	## o sea en total hay #3455 lineas de metadata tipo ##, si en algun momento resulta que hay mas entonces habria que cambiar el head -n y poner mas
  	skiprows=$(bcftools view ${path_maf}/tmp/${iname}_merged.vcf.gz | head -n 5000 | grep -n "#CHROM" | sed 's/:.*//')
 	numrows="$((${skiprows}-1))"
@@ -549,7 +556,6 @@ tabix -p vcf ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz
 tabix -p vcf ${path_maf}/tmp/merged_${date_paste}_tmp.vcf.gz
 
 
-
 SUBENDTIME=$(date +%s)
 echo "	Running time: $(($SUBENDTIME - $SUBSTARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
@@ -559,7 +565,6 @@ ENDTIME=$(date +%s)
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds" >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo >> ${path_maf}/metadata/${date_dir}/logfile.txt
 echo "Running time: $(($ENDTIME - $STARTTIME)) seconds"
-
 
 
 
@@ -575,6 +580,8 @@ echo "PLINK RELATIONSHIP CALCULATION"
 
 mkdir ${path_maf}/tmp/plinkout
 cd ${path_maf}/tmp/plinkout
+
+# Para que PLINK funcione necesito crear el ID de cada SNP ya que es el dato que el programa necesita:
 bcftools annotate --set-id +'%CHROM\_%POS\_%REF\_%FIRST_ALT' -o imputed_${date_paste}_ID_tmp.vcf.gz -O z ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz
 
 geno=0.05
@@ -621,8 +628,10 @@ echo "MAKING THE DEFINITIVE MERGED AND IMPUTED VCFs" >> ${path_maf}/metadata/${d
 STARTTIME=$(date +%s)
 echo "MAKING THE DEFINITIVE MERGED AND IMPUTED VCFs"
 
+# Se crean dos directorios donde se guardaran los vcf finales:
 mkdir "${path_maf}/merged_vcf/${date_dir}"
 mkdir "${path_maf}/imputed_vcf/${date_dir}"
+
 #04/09/2026: ana amil 20/06/2025 -> mkdir -p para que no de error si el directorio ya existe
 mkdir -p "${path_maf}/individual_vcf/discarded_vcf_tmp"
 mkdir -p "${path_maf}/coverage/discarded_bed_tmp"
@@ -637,7 +646,7 @@ else
 
  # QUITAR COLUMNA GENOTIPO DE MIS SAMLES EXLCUIDOS Y QUITAR LA COLETILLA DEL REPEAT, DE LAS MUESTRAS QUE SE QUEDAN
   #In summary, these commands are removing the genotype column de las muestras que excluimos y ademas LUEGO quitando la coletilla de: repeat1..., repeat2... que quedan en la columna del genotipo, debe ser un solo repeat por 
-  # ADN lo que se deja dentro porque si no al quitar la coletilla habria 2 (ejemplo repeat100-000 y repeat200-000, si en exluidas no esta alguna de las dos entonces no se van a quitar ninguna y al quitar la coletilla quedaria la meustra repetida)
+  # ADN lo que se deja dentro porque si no al quitar la coletilla habria 2 (ejemplo repeat100-000 y repeat200-000, si en exluidas no esta alguna de las dos entonces no se van a quitar ninguna y al quitar la coletilla quedaria la muestra repetida)
   # por eso es importante verificar que en excluidas esten todos -1 repeat de cada muestra que tiene repeats
 
   bcftools view -S ^${path_maf}/tmp/plinkout/lista_muestras_excluidas.tsv --min-ac=1 -O v ${path_maf}/tmp/imputed_${date_paste}_tmp.vcf.gz | sed "s/repeat[0-9]//g" | bgzip -c > ${path_maf}/imputed_vcf/${date_dir}/PREimputed_${date_paste}.vcf.gz
@@ -778,7 +787,6 @@ tabix -p vcf ${path_maf}/merged_vcf/${date_dir}/merged_${date_paste}.vcf.gz
 # mirar lo de check ref de abajo
 
 ############# FIN DE JOIN MULTIALELICAS Y RECALC
-
 
 
 
