@@ -127,11 +127,11 @@ export JAVA_OPTS="-Djava.io.tmpdir=${TMPDIR}"
 ##### GUR: hay que rellenar los paths de donde tenemos las cosas
 ## el data base path es TODA la carpeta donde esta db, vcfs, metadata... SIN BARRA AL FINAL
 # Data base path
-path_maf="/home/proyectos/bioinfo/NOBACKUP/margon/MAR_PRUEBAS/prueba_bd_cancer"
+path_maf="/home/proyectos/bioinfo/NOBACKUP/margon/MAR_PRUEBAS/prueba_bd_moc"
 #path_maf="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs"
 
 # TSV file with sample-pathology information (metadata.txt): ANTES SE PONIAN TSVs ahora yo pongo archivos de texto .txt
-mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/margon/MAR_PRUEBAS/prueba_bd_cancer/metadata/metadata.txt" # el normal
+mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/margon/MAR_PRUEBAS/prueba_bd_moc/metadata/metadata.txt" # el normal
 #mymetadatapathology_uniq="/home/proyectos/bioinfo/NOBACKUP/graciela/TODO_DBofAFs/PRUEBAS_DBofAFs/metadata/all_FJD.txt" #varias cat y varias subcat TODOS CES Y WGS Y WES
 
 # Task directory del github
