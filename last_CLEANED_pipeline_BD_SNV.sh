@@ -263,7 +263,7 @@ rename_files() {
 
     # Find all VCF files with the matching first 7 characters
     vcf_files=($(find "${path_maf}/individual_vcf/new_vcf" -type f -name "${sample}*.vcf.gz"))
-puedo usar el calldmr 
+
     for vcf_file in "${vcf_files[@]}"; do
         # Extract the original filename without the extension
         original_vcf_filename=$(basename "$vcf_file")
@@ -357,7 +357,7 @@ function MERGED {
 } 
 
 export -f MERGED
-parallel "MERGED" ::: ${path_maf} ::: ${path_maf}/tmp/subset_vmerge.subset_vcfs_aa.vcf.gzcfs_*
+parallel "MERGED" ::: ${path_maf} ::: ${path_maf}/tmp/subset_vcfs_*
 
 #EDIT GUR: ESTA LINEA DE CODIGO ESTA JUNTANDO LOS VCFS QUE SE SEPARARON ANTES. GONZALO DECIA QUE SI HABIA MÁS DE 
 #500 VCFS HABIA QUE REPARTIRLOS EN TROZOS, O SEA: si hay 1500 vcfs en la carpeta new_vcf se HARIAN 3 MERGE: merge_aa, merge_bb, merge_cc y cada uno tendria 
